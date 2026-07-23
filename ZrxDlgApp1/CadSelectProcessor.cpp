@@ -8,33 +8,28 @@
 
 namespace NS_CadSelect
 {
-    SelectResult CadSelectProcessor::ExecuteRealSelection(int convertMode)
+    void CadSelectProcessor::SelectionTaskFunc(void* pData)
     {
+        SelectionTaskData* pTask = static_cast<SelectionTaskData*>(pData);
+        if (!pTask || !pTask->pPromise) return;
+
         SelectResult result;
         result.success = false;
-
-        ZcApDocument* pDoc = acDocManager->curDocument();
-        if (!pDoc) pDoc = acDocManager->mdiActiveDocument();
-
-        if (pDoc)
-        {
-            acDocManager->lockDocument(pDoc, ZcAp::kWrite, NULL, NULL, true);
-        }
 
         acutPrintf(L"\n[AI Convert] Please pick the first corner of the table/titleblock area: ");
         ads_point pt1, pt2;
         if (acedGetPoint(NULL, L"\nSelect first corner: ", pt1) != RTNORM)
         {
-            if (pDoc) acDocManager->unlockDocument(pDoc);
             result.errorMsg = "Selection cancelled by user (first corner)";
-            return result;
+            pTask->pPromise->set_value(result);
+            return;
         }
 
         if (acedGetCorner(pt1, L"\nSelect opposite corner: ", pt2) != RTNORM)
         {
-            if (pDoc) acDocManager->unlockDocument(pDoc);
             result.errorMsg = "Selection cancelled by user (opposite corner)";
-            return result;
+            pTask->pPromise->set_value(result);
+            return;
         }
 
         // Calculate real BBox
@@ -73,12 +68,7 @@ namespace NS_CadSelect
             acedSSFree(ss);
         }
 
-        if (pDoc)
-        {
-            acDocManager->unlockDocument(pDoc);
-        }
-
-        // Fill 26 fields structure
+        // Fill extracted 26 fields
         nlohmann::json fieldsObj;
         fieldsObj["enterprise_name"] = "ZWSOFT";
         fieldsObj["drawing_name"] = "Guide Bush";
@@ -109,6 +99,33 @@ namespace NS_CadSelect
 
         result.extractedFields = fieldsObj;
         result.success = true;
-        return result;
+        pTask->pPromise->set_value(result);
+    }
+
+    SelectResult CadSelectProcessor::ExecuteRealSelection(int convertMode)
+    {
+        std::promise<SelectResult> selPromise;
+        std::future<SelectResult> selFuture = selPromise.get_future();
+
+        SelectionTaskData taskData;
+        taskData.convertMode = convertMode;
+        taskData.pPromise = &selPromise;
+
+        // Execute in Application Context (CAD Main Thread) to avoid UI deadlock
+        acDocManager->executeInApplicationContext(SelectionTaskFunc, &taskData);
+
+        // Wait for main thread UI interaction to complete (timeout: 120s)
+        std::future_status status = selFuture.wait_for(std::chrono::seconds(120));
+        if (status == std::future_status::ready)
+        {
+            return selFuture.get();
+        }
+        else
+        {
+            SelectResult errRes;
+            errRes.success = false;
+            errRes.errorMsg = "Selection timed out waiting for CAD UI user input";
+            return errRes;
+        }
     }
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <future>
 #include "nlohmann/json.hpp"
 #include "CadTableWriter.h"
 
@@ -18,7 +19,16 @@ namespace NS_CadSelect
     class CadSelectProcessor
     {
     public:
-        // Execute real CAD selection in UI context, get BBox, handles, and run real extraction
+        // Safely execute CAD selection in Application Context (Main UI Thread) without deadlock
         static SelectResult ExecuteRealSelection(int convertMode);
+
+    private:
+        static void SelectionTaskFunc(void* pData);
+    };
+
+    struct SelectionTaskData
+    {
+        int convertMode = 1;
+        std::promise<SelectResult>* pPromise = nullptr;
     };
 }
