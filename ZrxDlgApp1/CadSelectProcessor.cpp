@@ -51,7 +51,7 @@ namespace NS_CadSelect
         result.bbox.maxX = maxPt.x;
         result.bbox.maxY = maxPt.y;
 
-        // Collect entities & handles from single box selection (NO DOUBLE PROMPT)
+        // Collect entities & handles from single box selection
         ads_name ss;
         ZcDbObjectIdArray idArray;
         int res = acedSSGet(L"C", pt1, pt2, NULL, ss);
@@ -83,7 +83,9 @@ namespace NS_CadSelect
             acedSSFree(ss);
         }
 
-        // Prepare parameters for 100% native AiBomConvertCmd / AiTableRecognizeCmd execution
+        // Mode Check: convertMode == 1 is BOM Mode; convertMode == 0 or 2 is TitleBlock Mode
+        bool isBomMode = (pTask->convertMode == 1);
+
         NS_TableSum::RecognizeParam param;
         std::vector<ZcGePoint2d> points = Get4PointsFromMinMaxPt(minPt, maxPt);
         if (points.size() == 4)
@@ -105,14 +107,14 @@ namespace NS_CadSelect
         ZcString shortFileName = GetShortFileName(dwgPath);
         if (shortFileName.isEmpty())
         {
-            shortFileName = (pTask->convertMode == 1) ? L"AiBomConvert" : L"AiTableRecognize";
+            shortFileName = isBomMode ? L"AiBomConvert" : L"AiTableRecognize";
         }
 
         std::unordered_map<int, std::vector<NS_TableSum::AIConvertTableInfo>> outTableInfoVecMap;
         std::unordered_map<int, std::vector<NS_TableSum::AIConvertTextInfo>> outTextInfoVecMap;
         NS_TableSum::AIConvertType convertType = NS_TableSum::AIConvertType::tableRecOne;
 
-        std::string ocrOutDir = (pTask->convertMode == 1) ? 
+        std::string ocrOutDir = isBomMode ? 
             "C:\\Users\\zwsoft\\Desktop\\transform\\BOM_testdata\\ocr_result_json\\" : "";
 
         // 1. Run 100% Native OCR Recognition (GetEntitysTableResult)
@@ -134,21 +136,24 @@ namespace NS_CadSelect
         std::wstring outFile = zcTmpPath.kwszPtr() + jsonFileName;
 
         std::string difyError;
-        std::string difyApiKey = (pTask->convertMode == 1) ? "app-DnkpWQxiXmg2lZt2mQ8rnI5u" : "app-0B7nJIc5Jd1lblBjfADmRvkM";
-        std::wstring difyOutDir = (pTask->convertMode == 1) ? L"C:\\Users\\zwsoft\\Desktop\\transform\\BOM_testdata\\dify_results\\" : L"C:\\Users\\zwsoft\\Desktop\\transform\\testdata\\dify_results\\";
+        // TitleBlock Dify Key: app-0B7nJIc5Jd1lblBjfADmRvkM (used when convertMode is 0 or 2)
+        // BOM Dify Key: app-DnkpWQxiXmg2lZt2mQ8rnI5u (used when convertMode is 1)
+        std::string difyApiKey = isBomMode ? "app-DnkpWQxiXmg2lZt2mQ8rnI5u" : "app-0B7nJIc5Jd1lblBjfADmRvkM";
+        std::wstring difyOutDir = isBomMode ? L"C:\\Users\\zwsoft\\Desktop\\transform\\BOM_testdata\\dify_results\\" : L"C:\\Users\\zwsoft\\Desktop\\transform\\testdata\\dify_results\\";
         CreateSingleDirectory(difyOutDir.c_str());
 
-        // 3. Run 100% Native Dify Workflow (RunDifyWorkflowForString / RunDifyWorkflowForFile)
+        // 3. Run Native Dify Workflow (convertMode 0/2 -> TitleBlock Dify Workflow)
         bool difyOk = false;
         for (int retry = 1; retry <= 3; ++retry)
         {
-            acutPrintf(L"\n[AI Convert] Calling Dify workflow (attempt %d/3)...", retry);
-            if (pTask->convertMode == 1)
+            acutPrintf(L"\n[AI Convert] Calling Dify workflow (mode=%d, attempt %d/3)...", pTask->convertMode, retry);
+            if (isBomMode)
             {
                 difyOk = NS_TableSum::RunDifyWorkflowForString(outFile, jsonFileName, difyError, difyApiKey, difyOutDir);
             }
             else
             {
+                // convert_mode == 0 or 2: TitleBlock Dify Workflow
                 difyOk = NS_TableSum::RunDifyWorkflowForFile(outFile, jsonFileName, difyError, difyApiKey, difyOutDir);
             }
 
