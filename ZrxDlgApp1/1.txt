@@ -1,8 +1,0 @@
-AcDbArc, 72
-AcDbBlockReference, 113
-AcDbCircle, 5
-AcDbHatch, 5
-AcDbLine, 5674
-AcDbPoint, 4
-AcDbPolyline, 136
-AcDbSpline, 2

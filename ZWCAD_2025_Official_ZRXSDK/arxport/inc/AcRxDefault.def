@@ -1,4 +1,0 @@
-
-EXPORTS     
-zcrxEntryPoint		PRIVATE
-zcrxGetApiVersion	PRIVATE
