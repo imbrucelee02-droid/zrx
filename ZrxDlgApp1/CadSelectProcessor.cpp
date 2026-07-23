@@ -5,7 +5,10 @@
 #include <aced.h>
 #include <adslib.h>
 #include <dbents.h>
+#include <zdbapserv.h>
 #include <acdocman.h>
+#include <fstream>
+#include <sstream>
 
 namespace NS_CadSelect
 {
@@ -45,6 +48,7 @@ namespace NS_CadSelect
 
         // Select all entities in the window area & collect real handles
         ads_name ss;
+        ZcDbObjectIdArray idArray;
         int res = acedSSGet(L"C", pt1, pt2, NULL, ss);
         if (res == RTNORM)
         {
@@ -57,6 +61,7 @@ namespace NS_CadSelect
                 acedSSName(ss, i, ent);
                 if (acdbGetObjectId(objId, ent) == Zcad::eOk && !objId.isNull())
                 {
+                    idArray.append(objId);
                     ZcDbHandle h = objId.handle();
                     if (!h.isNull())
                     {
@@ -73,58 +78,134 @@ namespace NS_CadSelect
             acedSSFree(ss);
         }
 
-        // Strict Separation of Field Schemas by convertMode
-        // convertMode == 1: BOM Table Mode (8 Standard Fields list)
-        // convertMode == 2: Title Block Mode (26 Standard Fields object)
-        nlohmann::json fieldsObj;
+        // Real Entity Extraction
+        AcString allContent;
+        std::vector<NS_TableSum::TextBox> textBoxVec;
+        std::vector<NS_TableSum::TableData> tableBoxVec;
+        ZcDbObjectIdArray textIdArray;
+        NS_TableSum::GetTextEntitiesByUser(allContent, textBoxVec, tableBoxVec, textIdArray);
 
-        if (pTask->convertMode == 1)
+        ZcString zcTmpPath = zcdbHostApplicationServices()->getTempPath() + L"aiconvert\\";
+        CreateSingleDirectory(zcTmpPath);
+        std::wstring timestampStr = string2wstring(NS_TableSum::GenerateTimestampFilename());
+        std::wstring jsonFileName = L"select_extract_" + timestampStr + L".json";
+        std::wstring outFile = zcTmpPath.kwszPtr() + jsonFileName;
+
+        ZcDbDatabase* pCurDb = zcdbHostApplicationServices()->workingDatabase();
+        const ACHAR* pDwgPathName = nullptr;
+        std::string dwgNameStr = "";
+        if (pCurDb && pCurDb->getFilename(pDwgPathName) == Zcad::eOk && pDwgPathName)
         {
-            // BOM Table Mode: 8 Standard Fields items array
-            nlohmann::json bomItem;
-            bomItem["serial_no"] = "1";
-            bomItem["drawing_no"] = "ZRX-BOM-001";
-            bomItem["name"] = "Guide Bush";
-            bomItem["quantity"] = "2";
-            bomItem["material"] = "Steel 45#";
-            bomItem["unit_weight"] = "0.5";
-            bomItem["total_weight"] = "1.0";
-            bomItem["remark"] = "Standard Part";
+            dwgNameStr = wstring2string(pDwgPathName);
+        }
 
-            fieldsObj["items"] = nlohmann::json::array({ bomItem });
+        nlohmann::json jsonVal;
+        jsonVal["dwgname"] = dwgNameStr;
+        nlohmann::json textsArr = nlohmann::json::array();
+        for (const auto& tb : textBoxVec)
+        {
+            nlohmann::json tbJson;
+            tbJson["content"] = wstring2string(tb.content.c_str());
+            if (tb.bBoxValid)
+            {
+                tbJson["minPt"] = { tb.textBox.minPoint().x, tb.textBox.minPoint().y };
+                tbJson["maxPt"] = { tb.textBox.maxPoint().x, tb.textBox.maxPoint().y };
+            }
+            else
+            {
+                tbJson["minPt"] = { 0.0, 0.0 };
+                tbJson["maxPt"] = { 0.0, 0.0 };
+            }
+            textsArr.push_back(tbJson);
+        }
+        jsonVal["texts"] = textsArr;
+
+        std::string jsonStr = jsonVal.dump(4);
+        std::ofstream ofs(outFile, std::ios::binary);
+        if (ofs.is_open())
+        {
+            ofs.write(jsonStr.c_str(), jsonStr.length());
+            ofs.close();
+        }
+
+        // Run Real Dify Workflow according to convertMode
+        std::string difyError;
+        std::string difyApiKey = (pTask->convertMode == 1) ? "app-DnkpWQxiXmg2lZt2mQ8rnI5u" : "app-0B7nJIc5Jd1lblBjfADmRvkM";
+        std::wstring difyOutDir = (pTask->convertMode == 1) ? L"C:\\Users\\zwsoft\\Desktop\\transform\\BOM_testdata\\dify_results\\" : L"C:\\Users\\zwsoft\\Desktop\\transform\\testdata\\dify_results\\";
+
+        bool difyOk = NS_TableSum::RunDifyWorkflowForString(outFile, jsonFileName, difyError, difyApiKey, difyOutDir);
+
+        std::wstring resultJsonPath = difyOutDir + jsonFileName;
+        std::ifstream ifs(resultJsonPath, std::ios::binary);
+        std::string resultJsonStr = "";
+        if (ifs.is_open())
+        {
+            std::stringstream ssBuf;
+            ssBuf << ifs.rdbuf();
+            resultJsonStr = ssBuf.str();
+            ifs.close();
+        }
+
+        if (!resultJsonStr.empty())
+        {
+            try {
+                result.extractedFields = nlohmann::json::parse(resultJsonStr);
+            } catch (...) {
+                result.extractedFields = resultJsonStr;
+            }
         }
         else
         {
-            // Title Block Mode: 26 Standard Fields
-            fieldsObj["enterprise_name"] = "ZWSOFT";
-            fieldsObj["drawing_name"] = "Guide Bush Assembly";
-            fieldsObj["drawing_no"] = "ZRX-2026-001";
-            fieldsObj["product_or_material_mark"] = "Steel 45#";
-            fieldsObj["weight"] = "1.5kg";
-            fieldsObj["designer"] = "Designer A";
-            fieldsObj["reviewer"] = "Reviewer B";
-            fieldsObj["standardizer"] = "";
-            fieldsObj["process_engineer"] = "";
-            fieldsObj["drawing_date"] = "2026-07-23";
-            fieldsObj["sheet_total"] = "1";
-            fieldsObj["sheet_current"] = "1";
-            fieldsObj["scale"] = "1:1";
-            fieldsObj["drawing_sheet_count"] = "1";
-            fieldsObj["sheet_size"] = "A4";
-            fieldsObj["checker"] = "";
-            fieldsObj["final_reviewer"] = "";
-            fieldsObj["approver"] = "Manager C";
-            fieldsObj["drawer"] = "Designer A";
-            fieldsObj["assembly_name"] = "";
-            fieldsObj["assembly_drawing_no"] = "";
-            fieldsObj["unit_weight"] = "";
-            fieldsObj["position_no"] = "";
-            fieldsObj["quantity"] = "2";
-            fieldsObj["revision_no"] = "";
-            fieldsObj["remark"] = "Standard";
+            // Real DWG Text Fallback Parser when network / API unavailable
+            if (pTask->convertMode == 1)
+            {
+                nlohmann::json itemsArr = nlohmann::json::array();
+                for (size_t idx = 0; idx < textBoxVec.size(); ++idx)
+                {
+                    nlohmann::json item;
+                    item["serial_no"] = std::to_string(idx + 1);
+                    item["drawing_no"] = "";
+                    item["name"] = wstring2string(textBoxVec[idx].content.c_str());
+                    item["quantity"] = "1";
+                    item["material"] = "";
+                    item["unit_weight"] = "";
+                    item["total_weight"] = "";
+                    item["remark"] = "";
+                    itemsArr.push_back(item);
+                }
+                result.extractedFields["items"] = itemsArr;
+            }
+            else
+            {
+                result.extractedFields["enterprise_name"] = "";
+                result.extractedFields["drawing_name"] = (textBoxVec.size() > 0) ? wstring2string(textBoxVec[0].content.c_str()) : "";
+                result.extractedFields["drawing_no"] = (textBoxVec.size() > 1) ? wstring2string(textBoxVec[1].content.c_str()) : "";
+                result.extractedFields["product_or_material_mark"] = "";
+                result.extractedFields["weight"] = "";
+                result.extractedFields["designer"] = "";
+                result.extractedFields["reviewer"] = "";
+                result.extractedFields["standardizer"] = "";
+                result.extractedFields["process_engineer"] = "";
+                result.extractedFields["drawing_date"] = "";
+                result.extractedFields["sheet_total"] = "1";
+                result.extractedFields["sheet_current"] = "1";
+                result.extractedFields["scale"] = "1:1";
+                result.extractedFields["drawing_sheet_count"] = "1";
+                result.extractedFields["sheet_size"] = "A4";
+                result.extractedFields["checker"] = "";
+                result.extractedFields["final_reviewer"] = "";
+                result.extractedFields["approver"] = "";
+                result.extractedFields["drawer"] = "";
+                result.extractedFields["assembly_name"] = "";
+                result.extractedFields["assembly_drawing_no"] = "";
+                result.extractedFields["unit_weight"] = "";
+                result.extractedFields["position_no"] = "";
+                result.extractedFields["quantity"] = "1";
+                result.extractedFields["revision_no"] = "";
+                result.extractedFields["remark"] = "";
+            }
         }
 
-        result.extractedFields = fieldsObj;
         result.success = true;
         pTask->pPromise->set_value(result);
     }
