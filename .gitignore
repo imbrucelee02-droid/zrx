@@ -1,0 +1,16 @@
+.vs/
+x64/
+Debug/
+Release/
+*.user
+*.aps
+*.tlog
+*.log
+*.obj
+*.pch
+*.pdb
+*.idb
+*.ipch
+ZrxDlgApp1/x64/
+ZrxDlgApp1/Debug/
+ZrxDlgApp1/Release/
