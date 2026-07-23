@@ -9,6 +9,8 @@
 #include <acdocman.h>
 #include <fstream>
 #include <sstream>
+#include <thread>
+#include <chrono>
 
 namespace NS_CadSelect
 {
@@ -128,12 +130,27 @@ namespace NS_CadSelect
             ofs.close();
         }
 
-        // Run Real Dify Workflow according to convertMode
+        // Run Real Dify Workflow with 3-times retry mechanism (No Local Fallback)
         std::string difyError;
         std::string difyApiKey = (pTask->convertMode == 1) ? "app-DnkpWQxiXmg2lZt2mQ8rnI5u" : "app-0B7nJIc5Jd1lblBjfADmRvkM";
         std::wstring difyOutDir = (pTask->convertMode == 1) ? L"C:\\Users\\zwsoft\\Desktop\\transform\\BOM_testdata\\dify_results\\" : L"C:\\Users\\zwsoft\\Desktop\\transform\\testdata\\dify_results\\";
 
-        bool difyOk = NS_TableSum::RunDifyWorkflowForString(outFile, jsonFileName, difyError, difyApiKey, difyOutDir);
+        bool difyOk = false;
+        for (int retry = 1; retry <= 3; ++retry)
+        {
+            acutPrintf(L"\n[AI Convert] Calling Dify server (attempt %d/3)...", retry);
+            difyOk = NS_TableSum::RunDifyWorkflowForString(outFile, jsonFileName, difyError, difyApiKey, difyOutDir);
+            if (difyOk) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+
+        if (!difyOk)
+        {
+            result.success = false;
+            result.errorMsg = "Dify network request failed after 3 retries: " + difyError;
+            pTask->pPromise->set_value(result);
+            return;
+        }
 
         std::wstring resultJsonPath = difyOutDir + jsonFileName;
         std::ifstream ifs(resultJsonPath, std::ios::binary);
@@ -150,63 +167,18 @@ namespace NS_CadSelect
         {
             try {
                 result.extractedFields = nlohmann::json::parse(resultJsonStr);
-            } catch (...) {
-                result.extractedFields = resultJsonStr;
+                result.success = true;
+            } catch (std::exception& e) {
+                result.success = false;
+                result.errorMsg = std::string("Failed to parse Dify JSON response: ") + e.what();
             }
         }
         else
         {
-            // Real DWG Text Fallback Parser when network / API unavailable
-            if (pTask->convertMode == 1)
-            {
-                nlohmann::json itemsArr = nlohmann::json::array();
-                for (size_t idx = 0; idx < textBoxVec.size(); ++idx)
-                {
-                    nlohmann::json item;
-                    item["serial_no"] = std::to_string(idx + 1);
-                    item["drawing_no"] = "";
-                    item["name"] = wstring2string(textBoxVec[idx].content.c_str());
-                    item["quantity"] = "1";
-                    item["material"] = "";
-                    item["unit_weight"] = "";
-                    item["total_weight"] = "";
-                    item["remark"] = "";
-                    itemsArr.push_back(item);
-                }
-                result.extractedFields["items"] = itemsArr;
-            }
-            else
-            {
-                result.extractedFields["enterprise_name"] = "";
-                result.extractedFields["drawing_name"] = (textBoxVec.size() > 0) ? wstring2string(textBoxVec[0].content.c_str()) : "";
-                result.extractedFields["drawing_no"] = (textBoxVec.size() > 1) ? wstring2string(textBoxVec[1].content.c_str()) : "";
-                result.extractedFields["product_or_material_mark"] = "";
-                result.extractedFields["weight"] = "";
-                result.extractedFields["designer"] = "";
-                result.extractedFields["reviewer"] = "";
-                result.extractedFields["standardizer"] = "";
-                result.extractedFields["process_engineer"] = "";
-                result.extractedFields["drawing_date"] = "";
-                result.extractedFields["sheet_total"] = "1";
-                result.extractedFields["sheet_current"] = "1";
-                result.extractedFields["scale"] = "1:1";
-                result.extractedFields["drawing_sheet_count"] = "1";
-                result.extractedFields["sheet_size"] = "A4";
-                result.extractedFields["checker"] = "";
-                result.extractedFields["final_reviewer"] = "";
-                result.extractedFields["approver"] = "";
-                result.extractedFields["drawer"] = "";
-                result.extractedFields["assembly_name"] = "";
-                result.extractedFields["assembly_drawing_no"] = "";
-                result.extractedFields["unit_weight"] = "";
-                result.extractedFields["position_no"] = "";
-                result.extractedFields["quantity"] = "1";
-                result.extractedFields["revision_no"] = "";
-                result.extractedFields["remark"] = "";
-            }
+            result.success = false;
+            result.errorMsg = "Dify returned empty response file";
         }
 
-        result.success = true;
         pTask->pPromise->set_value(result);
     }
 
