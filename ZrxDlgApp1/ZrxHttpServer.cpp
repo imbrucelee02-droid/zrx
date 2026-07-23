@@ -153,15 +153,31 @@ namespace NS_ZrxHttp
                 nlohmann::json bboxJson = req["bbox"];
                 nlohmann::json fields = req["fields"];
 
+                std::vector<std::string> eraseHandles;
+                if (req.contains("erase_handles") && req["erase_handles"].is_array())
+                {
+                    for (const auto& item : req["erase_handles"])
+                    {
+                        if (item.is_string()) eraseHandles.push_back(item.get<std::string>());
+                    }
+                }
+                else if (req.contains("selected_handles") && req["selected_handles"].is_array())
+                {
+                    for (const auto& item : req["selected_handles"])
+                    {
+                        if (item.is_string()) eraseHandles.push_back(item.get<std::string>());
+                    }
+                }
+
                 NS_CadTable::BBox2D bbox;
                 bbox.minX = bboxJson.value("min_x", 0.0);
                 bbox.minY = bboxJson.value("min_y", 0.0);
                 bbox.maxX = bboxJson.value("max_x", 100.0);
                 bbox.maxY = bboxJson.value("max_y", 100.0);
 
-                bool bOk = NS_CadTable::CadTableWriter::WriteNativeTable(mode, style, bbox, fields);
+                bool bOk = NS_CadTable::CadTableWriter::WriteNativeTable(mode, style, bbox, fields, eraseHandles);
                 res["success"] = bOk;
-                res["message"] = bOk ? "ZcDbTable created successfully" : "Failed to write ZcDbTable";
+                res["message"] = bOk ? "ZcDbTable created and old entities erased successfully" : "Failed to write ZcDbTable";
             }
             catch (std::exception& e) {
                 res["success"] = false;

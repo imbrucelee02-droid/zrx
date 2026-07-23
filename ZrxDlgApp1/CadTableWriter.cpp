@@ -7,10 +7,27 @@
 
 namespace NS_CadTable
 {
-    bool CadTableWriter::WriteNativeTable(int convertMode, int styleType, const BBox2D& bbox, const nlohmann::json& fieldsData)
+    bool CadTableWriter::WriteNativeTable(int convertMode, int styleType, const BBox2D& bbox, const nlohmann::json& fieldsData, const std::vector<std::string>& eraseHandles)
     {
         ZcDbDatabase* pDb = zcdbHostApplicationServices()->workingDatabase();
         if (!pDb) return false;
+
+        // Scheme A: Erase old selected entities if handles provided
+        for (const auto& hStr : eraseHandles)
+        {
+            if (hStr.empty()) continue;
+            ZcDbHandle h(hStr.c_str());
+            ZcDbObjectId objId;
+            if (pDb->getAcDbObjectId(objId, false, h) == Zcad::eOk && !objId.isNull())
+            {
+                ZcDbEntity* pOldEnt = nullptr;
+                if (zcedOpenAcDbEntity(pOldEnt, objId, ZcDb::kForWrite) == Zcad::eOk)
+                {
+                    pOldEnt->erase(true);
+                    pOldEnt->close();
+                }
+            }
+        }
 
         std::vector<std::pair<std::string, std::string>> kvPairs;
         if (fieldsData.is_object())

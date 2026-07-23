@@ -17,7 +17,7 @@ namespace NS_CadTable
     class CadTableWriter
     {
     public:
-        // Write CAD Native ZcDbTable aligned with BBox bottom boundary
-        static bool WriteNativeTable(int convertMode, int styleType, const BBox2D& bbox, const nlohmann::json& fieldsData);
+        // Write CAD Native ZcDbTable aligned with BBox bottom boundary, and erase old selected entities (Scheme A)
+        static bool WriteNativeTable(int convertMode, int styleType, const BBox2D& bbox, const nlohmann::json& fieldsData, const std::vector<std::string>& eraseHandles = {});
     };
 }
