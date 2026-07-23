@@ -204,7 +204,10 @@
     <ClCompile Include="HelloWorld2.cpp" />
     <ClCompile Include="PraseDwgTables2.cpp" />
     <ClCompile Include="rxentrypoint.cpp" />
-    <ClCompile Include="AgentTableSum.cpp" />
+        <ClCompile Include="AgentTableSum.cpp" />
+    <ClCompile Include="CadTableWriter.cpp" />
+    <ClCompile Include="ZrxHttpServer.cpp" />
+    <ClCompile Include="CadWebViewDialog.cpp" />
     <ClCompile Include="minizip\zip.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -245,7 +248,10 @@
     <None Include="ZrxDlgApp1.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AgentTableSum.h" />
+        <ClInclude Include="AgentTableSum.h" />
+    <ClInclude Include="CadTableWriter.h" />
+    <ClInclude Include="ZrxHttpServer.h" />
+    <ClInclude Include="CadWebViewDialog.h" />
     <ClInclude Include="Common.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="nlohmann\json.hpp" />

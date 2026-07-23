@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "CadWebViewDialog.h"
+#include "ZrxHttpServer.h"
 #include "stdafx.h"
 #include "adsmigr.h"
 #include "adsdef.h"
@@ -553,6 +555,11 @@ void AiBomConvertCmd()
 }
 
 
+void AiConvertCmd()
+{
+    NS_CadWebView::CadWebViewDialog::ShowWebViewWindow(L"http://127.0.0.1:8501");
+}
+
 void initapp()
 {
 	CZcModuleResourceOverride resOverride;
@@ -569,7 +576,8 @@ void initapp()
 	zcedRegCmds->addCommand(cmd_group_name, _T("AI_TABLE_RECOGNIZE"), _T("AI_TABLE_RECOGNIZE"), ZCRX_CMD_MODAL, AiTableRecognizeCmd);
 
 	//AI BOM standard conversion command
-	zcedRegCmds->addCommand(cmd_group_name, _T("AI_BOM_Convert"), _T("AI_BOM_Convert"), ZCRX_CMD_MODAL, AiBomConvertCmd);
+		zcedRegCmds->addCommand(cmd_group_name, _T("AI_BOM_Convert"), _T("AI_BOM_Convert"), ZCRX_CMD_MODAL, AiBomConvertCmd);
+	zcedRegCmds->addCommand(cmd_group_name, _T("AI_Convert"), _T("AI_Convert"), ZCRX_CMD_MODAL, AiConvertCmd);
 }
 
 
