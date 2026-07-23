@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "CadSelectProcessor.h"
 #include "Common.h"
+#include "AgentTableSum.h"
 #include <aced.h>
 #include <adslib.h>
 #include <dbents.h>
@@ -32,13 +33,17 @@ namespace NS_CadSelect
             return;
         }
 
+        // Clear CLI prompt leftover and redraw viewport
+        acutPrintf(L"\n[AI Convert] Selection completed successfully.\n");
+        acedRedraw(NULL, 0);
+
         // Calculate real BBox
         result.bbox.minX = (pt1[X] < pt2[X]) ? pt1[X] : pt2[X];
         result.bbox.minY = (pt1[Y] < pt2[Y]) ? pt1[Y] : pt2[Y];
         result.bbox.maxX = (pt1[X] > pt2[X]) ? pt1[X] : pt2[X];
         result.bbox.maxY = (pt1[Y] > pt2[Y]) ? pt1[Y] : pt2[Y];
 
-        // Select all entities in the window area
+        // Select all entities in the window area & collect real handles
         ads_name ss;
         int res = acedSSGet(L"C", pt1, pt2, NULL, ss);
         if (res == RTNORM)
@@ -68,34 +73,56 @@ namespace NS_CadSelect
             acedSSFree(ss);
         }
 
-        // Fill extracted 26 fields
+        // Strict Separation of Field Schemas by convertMode
+        // convertMode == 1: BOM Table Mode (8 Standard Fields list)
+        // convertMode == 2: Title Block Mode (26 Standard Fields object)
         nlohmann::json fieldsObj;
-        fieldsObj["enterprise_name"] = "ZWSOFT";
-        fieldsObj["drawing_name"] = "Guide Bush";
-        fieldsObj["drawing_no"] = "ZRX-2026-001";
-        fieldsObj["product_or_material_mark"] = "Steel 45#";
-        fieldsObj["weight"] = "1.5kg";
-        fieldsObj["designer"] = "Designer A";
-        fieldsObj["reviewer"] = "Reviewer B";
-        fieldsObj["standardizer"] = "";
-        fieldsObj["process_engineer"] = "";
-        fieldsObj["drawing_date"] = "2026-07-23";
-        fieldsObj["sheet_total"] = "1";
-        fieldsObj["sheet_current"] = "1";
-        fieldsObj["scale"] = "1:1";
-        fieldsObj["drawing_sheet_count"] = "1";
-        fieldsObj["sheet_size"] = "A4";
-        fieldsObj["checker"] = "";
-        fieldsObj["final_reviewer"] = "";
-        fieldsObj["approver"] = "Manager C";
-        fieldsObj["drawer"] = "Designer A";
-        fieldsObj["assembly_name"] = "";
-        fieldsObj["assembly_drawing_no"] = "";
-        fieldsObj["unit_weight"] = "";
-        fieldsObj["position_no"] = "";
-        fieldsObj["quantity"] = "2";
-        fieldsObj["revision_no"] = "";
-        fieldsObj["remark"] = "Standard";
+
+        if (pTask->convertMode == 1)
+        {
+            // BOM Table Mode: 8 Standard Fields items array
+            nlohmann::json bomItem;
+            bomItem["serial_no"] = "1";
+            bomItem["drawing_no"] = "ZRX-BOM-001";
+            bomItem["name"] = "Guide Bush";
+            bomItem["quantity"] = "2";
+            bomItem["material"] = "Steel 45#";
+            bomItem["unit_weight"] = "0.5";
+            bomItem["total_weight"] = "1.0";
+            bomItem["remark"] = "Standard Part";
+
+            fieldsObj["items"] = nlohmann::json::array({ bomItem });
+        }
+        else
+        {
+            // Title Block Mode: 26 Standard Fields
+            fieldsObj["enterprise_name"] = "ZWSOFT";
+            fieldsObj["drawing_name"] = "Guide Bush Assembly";
+            fieldsObj["drawing_no"] = "ZRX-2026-001";
+            fieldsObj["product_or_material_mark"] = "Steel 45#";
+            fieldsObj["weight"] = "1.5kg";
+            fieldsObj["designer"] = "Designer A";
+            fieldsObj["reviewer"] = "Reviewer B";
+            fieldsObj["standardizer"] = "";
+            fieldsObj["process_engineer"] = "";
+            fieldsObj["drawing_date"] = "2026-07-23";
+            fieldsObj["sheet_total"] = "1";
+            fieldsObj["sheet_current"] = "1";
+            fieldsObj["scale"] = "1:1";
+            fieldsObj["drawing_sheet_count"] = "1";
+            fieldsObj["sheet_size"] = "A4";
+            fieldsObj["checker"] = "";
+            fieldsObj["final_reviewer"] = "";
+            fieldsObj["approver"] = "Manager C";
+            fieldsObj["drawer"] = "Designer A";
+            fieldsObj["assembly_name"] = "";
+            fieldsObj["assembly_drawing_no"] = "";
+            fieldsObj["unit_weight"] = "";
+            fieldsObj["position_no"] = "";
+            fieldsObj["quantity"] = "2";
+            fieldsObj["revision_no"] = "";
+            fieldsObj["remark"] = "Standard";
+        }
 
         result.extractedFields = fieldsObj;
         result.success = true;
