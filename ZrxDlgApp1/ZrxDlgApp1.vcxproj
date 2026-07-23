@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -206,6 +206,7 @@
     <ClCompile Include="rxentrypoint.cpp" />
         <ClCompile Include="AgentTableSum.cpp" />
     <ClCompile Include="CadTableWriter.cpp" />
+    <ClCompile Include="CadSelectProcessor.cpp" />
     <ClCompile Include="ZrxHttpServer.cpp" />
     <ClCompile Include="CadWebViewDialog.cpp" />
     <ClCompile Include="minizip\zip.c">
@@ -250,6 +251,7 @@
   <ItemGroup>
         <ClInclude Include="AgentTableSum.h" />
     <ClInclude Include="CadTableWriter.h" />
+    <ClInclude Include="CadSelectProcessor.h" />
     <ClInclude Include="ZrxHttpServer.h" />
     <ClInclude Include="CadWebViewDialog.h" />
     <ClInclude Include="Common.h" />

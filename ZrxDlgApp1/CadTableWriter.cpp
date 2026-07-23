@@ -33,7 +33,8 @@ namespace NS_CadTable
             acDocManager->lockDocument(pLockDoc, ZcAp::kWrite, NULL, NULL, true);
         }
 
-        // Scheme A: Erase old selected entities if handles provided
+        // Scheme A: Real Erase old selected entities if handles provided
+        int erasedCount = 0;
         for (const auto& hStr : eraseHandles)
         {
             if (hStr.empty()) continue;
@@ -47,6 +48,7 @@ namespace NS_CadTable
                     {
                         pOldEnt->erase(true);
                         pOldEnt->close();
+                        erasedCount++;
                     }
                 }
             } catch (...) {}
@@ -147,6 +149,9 @@ namespace NS_CadTable
         {
             acDocManager->unlockDocument(pLockDoc);
         }
+
+        // Force viewport update
+        acedUpdateDisplay();
         return true;
     }
 }

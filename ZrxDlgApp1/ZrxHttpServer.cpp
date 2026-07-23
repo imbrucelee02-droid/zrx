@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "ZrxHttpServer.h"
 #include "CadTableWriter.h"
+#include "CadSelectProcessor.h"
 #include "AgentTableSum.h"
 #include "Common.h"
 #include <winsock2.h>
@@ -144,56 +145,34 @@ namespace NS_ZrxHttp
             return res.dump();
         }
 
-        // Endpoint 1: Trigger CAD Box-Selection & Extract Dify 26-fields
+        // Endpoint 1: Trigger REAL CAD Box-Selection & Extract 26-fields
         if (path == "/api/select_and_process" && method == "POST")
         {
             try {
                 nlohmann::json req = nlohmann::json::parse(body);
                 int mode = req.value("convert_mode", 1); // 1: BOM, 2: TitleBlock
 
-                res["success"] = true;
-                res["message"] = "Selection and processing completed successfully";
-                res["convert_mode"] = mode;
-
-                res["bbox"] = {
-                    { "min_x", 100.0 },
-                    { "min_y", 100.0 },
-                    { "max_x", 300.0 },
-                    { "max_y", 200.0 }
-                };
-
-                res["selected_handles"] = nlohmann::json::array({ "2A1C", "2A1D" });
-
-                // 26 fields JSON template
-                nlohmann::json fieldsObj;
-                fieldsObj["enterprise_name"] = "ZWSOFT";
-                fieldsObj["drawing_name"] = "Guide Bush";
-                fieldsObj["drawing_no"] = "ZRX-2026-001";
-                fieldsObj["product_or_material_mark"] = "Steel 45#";
-                fieldsObj["weight"] = "1.5kg";
-                fieldsObj["designer"] = "Designer A";
-                fieldsObj["reviewer"] = "Reviewer B";
-                fieldsObj["standardizer"] = "";
-                fieldsObj["process_engineer"] = "";
-                fieldsObj["drawing_date"] = "2026-07-23";
-                fieldsObj["sheet_total"] = "1";
-                fieldsObj["sheet_current"] = "1";
-                fieldsObj["scale"] = "1:1";
-                fieldsObj["drawing_sheet_count"] = "1";
-                fieldsObj["sheet_size"] = "A4";
-                fieldsObj["checker"] = "";
-                fieldsObj["final_reviewer"] = "";
-                fieldsObj["approver"] = "Manager C";
-                fieldsObj["drawer"] = "Designer A";
-                fieldsObj["assembly_name"] = "";
-                fieldsObj["assembly_drawing_no"] = "";
-                fieldsObj["unit_weight"] = "";
-                fieldsObj["position_no"] = "";
-                fieldsObj["quantity"] = "2";
-                fieldsObj["revision_no"] = "";
-                fieldsObj["remark"] = "Standard";
-
-                res["extracted_fields"] = fieldsObj;
+                // Execute real CAD viewport selection
+                NS_CadSelect::SelectResult selRes = NS_CadSelect::CadSelectProcessor::ExecuteRealSelection(mode);
+                if (selRes.success)
+                {
+                    res["success"] = true;
+                    res["message"] = "Real CAD selection and processing completed";
+                    res["convert_mode"] = mode;
+                    res["bbox"] = {
+                        { "min_x", selRes.bbox.minX },
+                        { "min_y", selRes.bbox.minY },
+                        { "max_x", selRes.bbox.maxX },
+                        { "max_y", selRes.bbox.maxY }
+                    };
+                    res["selected_handles"] = selRes.selectedHandles;
+                    res["extracted_fields"] = selRes.extractedFields;
+                }
+                else
+                {
+                    res["success"] = false;
+                    res["message"] = "CAD selection failed: " + selRes.errorMsg;
+                }
             }
             catch (std::exception& e) {
                 res["success"] = false;
@@ -202,7 +181,7 @@ namespace NS_ZrxHttp
             return res.dump();
         }
 
-        // Endpoint 2: Accept Final Confirmed Data & Write Back ZcDbTable (Scheme A Erase)
+        // Endpoint 2: Accept Final Confirmed Data & Write Back ZcDbTable (Scheme A Real Erase)
         if (path == "/api/writeback_table" && method == "POST")
         {
             try {
