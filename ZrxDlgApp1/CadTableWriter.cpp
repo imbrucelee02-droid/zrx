@@ -4,6 +4,7 @@
 #include <dbtable.h>
 #include <dbapserv.h>
 #include <dbents.h>
+#include <aced.h>
 
 namespace NS_CadTable
 {
@@ -16,17 +17,19 @@ namespace NS_CadTable
         for (const auto& hStr : eraseHandles)
         {
             if (hStr.empty()) continue;
-            ZcDbHandle h(hStr.c_str());
-            ZcDbObjectId objId;
-            if (pDb->getAcDbObjectId(objId, false, h) == Zcad::eOk && !objId.isNull())
-            {
-                ZcDbEntity* pOldEnt = nullptr;
-                if (zcedOpenAcDbEntity(pOldEnt, objId, ZcDb::kForWrite) == Zcad::eOk)
+            try {
+                ZcDbHandle h(string2wstring(hStr).c_str());
+                ZcDbObjectId objId;
+                if (pDb->getAcDbObjectId(objId, false, h) == Zcad::eOk && !objId.isNull())
                 {
-                    pOldEnt->erase(true);
-                    pOldEnt->close();
+                    ZcDbEntity* pOldEnt = nullptr;
+                    if (zcdbOpenObject(pOldEnt, objId, ZcDb::kForWrite) == Zcad::eOk && pOldEnt)
+                    {
+                        pOldEnt->erase(true);
+                        pOldEnt->close();
+                    }
                 }
-            }
+            } catch (...) {}
         }
 
         std::vector<std::pair<std::string, std::string>> kvPairs;
