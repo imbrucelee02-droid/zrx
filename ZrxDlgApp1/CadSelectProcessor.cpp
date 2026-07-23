@@ -11,76 +11,9 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
-#include <curl/curl.h>
 
 namespace NS_CadSelect
 {
-    static size_t LocalCurlWriteCallback(void* contents, size_t size, size_t nmemb, std::string* s)
-    {
-        size_t newLength = size * nmemb;
-        if (!s) return 0;
-        try
-        {
-            s->append((char*)contents, newLength);
-            return newLength;
-        }
-        catch (...)
-        {
-            return 0;
-        }
-    }
-
-    // Helper function for quick cURL POST to Dify with 12s short timeout
-    static bool QuickDifyCall(const std::string& jsonContent, const std::string& apiKey, std::string& outResponseStr, std::string& outErr)
-    {
-        CURL* curl = curl_easy_init();
-        if (!curl) { outErr = "curl_easy_init failed"; return false; }
-
-        curl_easy_setopt(curl, CURLOPT_PROXY, "");
-
-        nlohmann::json payload;
-        payload["inputs"]["json_string"] = jsonContent;
-        payload["response_mode"] = "blocking";
-        payload["user"] = "zwsoft-desktop";
-
-        std::string reqBody = payload.dump();
-        struct curl_slist* headers = NULL;
-        std::string authHeader = "Authorization: Bearer " + apiKey;
-        headers = curl_slist_append(headers, authHeader.c_str());
-        headers = curl_slist_append(headers, "Content-Type: application/json; charset=utf-8");
-
-        curl_easy_setopt(curl, CURLOPT_URL, "http://192.168.57.56/v1/workflows/run");
-        curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, reqBody.c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)reqBody.size());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, LocalCurlWriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &outResponseStr);
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L); // 5s connect timeout
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 12L);        // 12s total timeout
-
-        CURLcode res = curl_easy_perform(curl);
-        long httpCode = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
-
-        curl_slist_free_all(headers);
-        curl_easy_cleanup(curl);
-
-        if (res != CURLE_OK)
-        {
-            outErr = "cURL error: " + std::string(curl_easy_strerror(res));
-            return false;
-        }
-
-        if (httpCode != 200)
-        {
-            outErr = "Dify HTTP status " + std::to_string(httpCode) + ", Body: " + outResponseStr;
-            return false;
-        }
-
-        return true;
-    }
-
     void CadSelectProcessor::SelectionTaskFunc(void* pData)
     {
         SelectionTaskData* pTask = static_cast<SelectionTaskData*>(pData);
@@ -106,7 +39,7 @@ namespace NS_CadSelect
         }
 
         // Clear CLI prompt leftover and redraw viewport
-        acutPrintf(L"\n[AI Convert] Single box selection completed.\n");
+        acutPrintf(L"\n[AI Convert] Single box selection completed. Processing Dify/OCR...\n");
         acedRedraw(NULL, 0);
 
         // Calculate real BBox
@@ -115,9 +48,9 @@ namespace NS_CadSelect
         result.bbox.maxX = (pt1[X] > pt2[X]) ? pt1[X] : pt2[X];
         result.bbox.maxY = (pt1[Y] > pt2[Y]) ? pt1[Y] : pt2[Y];
 
-        // Directly collect entities & text from the SINGLE box selection (NO DOUBLE PROMPT)
+        // Directly collect entities & handles from the single box selection
         ads_name ss;
-        std::vector<NS_TableSum::TextBox> textBoxVec;
+        ZcDbObjectIdArray idArray;
         int res = acedSSGet(L"C", pt1, pt2, NULL, ss);
         if (res == RTNORM)
         {
@@ -130,6 +63,7 @@ namespace NS_CadSelect
                 acedSSName(ss, i, ent);
                 if (acdbGetObjectId(objId, ent) == Zcad::eOk && !objId.isNull())
                 {
+                    idArray.append(objId);
                     ZcDbHandle h = objId.handle();
                     if (!h.isNull())
                     {
@@ -141,104 +75,95 @@ namespace NS_CadSelect
                             result.selectedHandles.push_back(hStr);
                         }
                     }
-
-                    // Open entity to extract text directly from the selected window
-                    ZcDbEntity* pEnt = nullptr;
-                    if (zcdbOpenObject(pEnt, objId, ZcDb::kForRead) == Zcad::eOk && pEnt)
-                    {
-                        if (pEnt->isKindOf(ZcDbText::desc()))
-                        {
-                            ZcDbText* pText = ZcDbText::cast(pEnt);
-                            if (pText && pText->textString())
-                            {
-                                NS_TableSum::TextBox tb;
-                                tb.content = pText->textString();
-                                tb.bBoxValid = true;
-                                pText->getGeomExtents(tb.textBox);
-                                textBoxVec.push_back(tb);
-                            }
-                        }
-                        else if (pEnt->isKindOf(ZcDbMText::desc()))
-                        {
-                            ZcDbMText* pMText = ZcDbMText::cast(pEnt);
-                            if (pMText && pMText->contents())
-                            {
-                                NS_TableSum::TextBox tb;
-                                tb.content = pMText->contents();
-                                tb.bBoxValid = true;
-                                pMText->getGeomExtents(tb.textBox);
-                                textBoxVec.push_back(tb);
-                            }
-                        }
-                        pEnt->close();
-                    }
                 }
             }
             acedSSFree(ss);
         }
 
-        // Serialize DWG text to JSON payload
-        ZcDbDatabase* pCurDb = zcdbHostApplicationServices()->workingDatabase();
-        const ACHAR* pDwgPathName = nullptr;
-        std::string dwgNameStr = "";
-        if (pCurDb && pCurDb->getFilename(pDwgPathName) == Zcad::eOk && pDwgPathName)
-        {
-            dwgNameStr = wstring2string(pDwgPathName);
-        }
+        // 1. Prepare temp directory & file names for OCR / Dify Export
+        ZcString zcTmpPath = zcdbHostApplicationServices()->getTempPath() + L"aiconvert\\";
+        CreateSingleDirectory(zcTmpPath);
+        std::wstring timestampStr = string2wstring(NS_TableSum::GenerateTimestampFilename());
+        std::wstring shortFileName = (pTask->convertMode == 1) ? L"bom_" + timestampStr : L"title_" + timestampStr;
+        std::wstring jsonFileName = shortFileName + L".json";
+        std::wstring outFile = zcTmpPath.kwszPtr() + jsonFileName;
 
-        nlohmann::json jsonVal;
-        jsonVal["dwgname"] = dwgNameStr;
-        nlohmann::json textsArr = nlohmann::json::array();
-        for (const auto& tb : textBoxVec)
-        {
-            nlohmann::json tbJson;
-            tbJson["content"] = wstring2string(tb.content.c_str());
-            if (tb.bBoxValid)
-            {
-                tbJson["minPt"] = { tb.textBox.minPoint().x, tb.textBox.minPoint().y };
-                tbJson["maxPt"] = { tb.textBox.maxPoint().x, tb.textBox.maxPoint().y };
-            }
-            textsArr.push_back(tbJson);
-        }
-        jsonVal["texts"] = textsArr;
-        std::string dwgJsonStr = jsonVal.dump(4);
+        std::string destZipFile = wstring2string(zcTmpPath.kwszPtr()) + wstring2string(shortFileName) + ".zip";
+        std::vector<ZcString> fileList;
+        std::vector<ZcString> filePathList;
+        std::vector<ZcGePoint3d> pts;
+        pts.push_back(ZcGePoint3d(pt1[X], pt1[Y], 0.0));
+        pts.push_back(ZcGePoint3d(pt2[X], pt2[Y], 0.0));
+        INT64 tempDwgSize = 0;
 
-        // Run Real Dify Workflow with 3-times retry & fast 12s timeout
+        // 2. Save temporary DWG & snapshot for OCR recognition
+        NS_TableSum::SaveTmpDwg(idArray, destZipFile, fileList, filePathList, pts, tempDwgSize);
+
+        // 3. Call full native RunDifyWorkflowForFile / RunDifyWorkflowForString
+        std::string difyError;
         std::string difyApiKey = (pTask->convertMode == 1) ? "app-DnkpWQxiXmg2lZt2mQ8rnI5u" : "app-0B7nJIc5Jd1lblBjfADmRvkM";
-        std::string difyResponseStr = "";
-        std::string difyErr = "";
-        bool difyOk = false;
+        std::wstring difyOutDir = (pTask->convertMode == 1) ? L"C:\\Users\\zwsoft\\Desktop\\transform\\BOM_testdata\\dify_results\\" : L"C:\\Users\\zwsoft\\Desktop\\transform\\testdata\\dify_results\\";
+        CreateSingleDirectory(difyOutDir.c_str());
 
+        bool difyOk = false;
         for (int retry = 1; retry <= 3; ++retry)
         {
-            acutPrintf(L"\n[AI Convert] Calling Dify server (attempt %d/3)...", retry);
-            difyOk = QuickDifyCall(dwgJsonStr, difyApiKey, difyResponseStr, difyErr);
+            acutPrintf(L"\n[AI Convert] Calling Dify OCR workflow (attempt %d/3)...", retry);
+            if (pTask->convertMode == 1)
+            {
+                difyOk = NS_TableSum::RunDifyWorkflowForString(outFile, jsonFileName, difyError, difyApiKey, difyOutDir);
+            }
+            else
+            {
+                difyOk = NS_TableSum::RunDifyWorkflowForFile(outFile, jsonFileName, difyError, difyApiKey, difyOutDir);
+            }
+
             if (difyOk) break;
-            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
 
         if (!difyOk)
         {
             result.success = false;
-            result.errorMsg = "Dify server request failed after 3 retries: " + difyErr;
+            result.errorMsg = "Dify/OCR workflow failed after 3 retries: " + difyError;
             pTask->pPromise->set_value(result);
             return;
         }
 
-        try {
-            nlohmann::json respJson = nlohmann::json::parse(difyResponseStr);
-            if (respJson.contains("data") && respJson["data"].contains("outputs"))
-            {
-                result.extractedFields = respJson["data"]["outputs"];
+        // 4. Read the exact JSON output generated by Dify Workflow
+        std::wstring resultJsonPath = difyOutDir + jsonFileName;
+        std::ifstream ifs(resultJsonPath, std::ios::binary);
+        std::string resultJsonStr = "";
+        if (ifs.is_open())
+        {
+            std::stringstream ssBuf;
+            ssBuf << ifs.rdbuf();
+            resultJsonStr = ssBuf.str();
+            ifs.close();
+        }
+
+        if (!resultJsonStr.empty())
+        {
+            try {
+                nlohmann::json respJson = nlohmann::json::parse(resultJsonStr);
+                if (respJson.contains("data") && respJson["data"].contains("outputs"))
+                {
+                    result.extractedFields = respJson["data"]["outputs"];
+                }
+                else
+                {
+                    result.extractedFields = respJson;
+                }
+                result.success = true;
+            } catch (std::exception& e) {
+                result.success = false;
+                result.errorMsg = std::string("Failed to parse Dify JSON response: ") + e.what();
             }
-            else
-            {
-                result.extractedFields = respJson;
-            }
-            result.success = true;
-        } catch (std::exception& e) {
+        }
+        else
+        {
             result.success = false;
-            result.errorMsg = std::string("Failed to parse Dify JSON response: ") + e.what() + ", Response: " + difyResponseStr;
+            result.errorMsg = "Dify workflow output file is empty: " + wstring2string(resultJsonPath);
         }
 
         pTask->pPromise->set_value(result);
