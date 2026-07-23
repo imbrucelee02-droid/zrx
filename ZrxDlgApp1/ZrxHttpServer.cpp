@@ -98,7 +98,6 @@ namespace NS_ZrxHttp
                 std::string method, path, protocol;
                 iss >> method >> path >> protocol;
 
-                // Find Body
                 std::string body = "";
                 size_t bodyPos = reqStr.find("\r\n\r\n");
                 if (bodyPos != std::string::npos)
@@ -150,8 +149,9 @@ namespace NS_ZrxHttp
                 nlohmann::json req = nlohmann::json::parse(body);
                 int mode = req.value("convert_mode", 1);
                 int style = req.value("style_type", 1);
-                nlohmann::json bboxJson = req["bbox"];
-                nlohmann::json fields = req["fields"];
+                
+                nlohmann::json bboxJson = req.contains("bbox") ? req["bbox"] : nlohmann::json::object();
+                nlohmann::json fields = req.contains("fields") ? req["fields"] : nlohmann::json::object();
 
                 std::vector<std::string> eraseHandles;
                 if (req.contains("erase_handles") && req["erase_handles"].is_array())
@@ -175,13 +175,22 @@ namespace NS_ZrxHttp
                 bbox.maxX = bboxJson.value("max_x", 100.0);
                 bbox.maxY = bboxJson.value("max_y", 100.0);
 
-                bool bOk = NS_CadTable::CadTableWriter::WriteNativeTable(mode, style, bbox, fields, eraseHandles);
+                std::string errStr;
+                bool bOk = NS_CadTable::CadTableWriter::WriteNativeTable(mode, style, bbox, fields, eraseHandles, errStr);
                 res["success"] = bOk;
-                res["message"] = bOk ? "ZcDbTable created and old entities erased successfully" : "Failed to write ZcDbTable";
+                if (bOk)
+                {
+                    res["message"] = "ZcDbTable created successfully";
+                }
+                else
+                {
+                    res["message"] = "Failed to write ZcDbTable: " + errStr;
+                    res["detail_error"] = errStr;
+                }
             }
             catch (std::exception& e) {
                 res["success"] = false;
-                res["error"] = e.what();
+                res["message"] = std::string("Exception: ") + e.what();
             }
             return res.dump();
         }

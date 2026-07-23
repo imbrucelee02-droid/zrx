@@ -5,13 +5,33 @@
 #include <dbapserv.h>
 #include <dbents.h>
 #include <aced.h>
+#include <acdocman.h>
 
 namespace NS_CadTable
 {
-    bool CadTableWriter::WriteNativeTable(int convertMode, int styleType, const BBox2D& bbox, const nlohmann::json& fieldsData, const std::vector<std::string>& eraseHandles)
+    bool CadTableWriter::WriteNativeTable(int convertMode, int styleType, const BBox2D& bbox, const nlohmann::json& fieldsData, const std::vector<std::string>& eraseHandles, std::string& outError)
     {
-        ZcDbDatabase* pDb = zcdbHostApplicationServices()->workingDatabase();
-        if (!pDb) return false;
+        outError.clear();
+
+        ZcApDocument* pDoc = acDocManager->curDocument();
+        if (!pDoc)
+        {
+            pDoc = acDocManager->mdiActiveDocument();
+        }
+
+        ZcDbDatabase* pDb = pDoc ? pDoc->database() : zcdbHostApplicationServices()->workingDatabase();
+        if (!pDb)
+        {
+            outError = "No working CAD database available";
+            return false;
+        }
+
+        // Lock Document for multi-threading safety
+        ZcApDocument* pLockDoc = pDoc;
+        if (pLockDoc)
+        {
+            acDocManager->lockDocument(pLockDoc, ZcAp::kWrite, NULL, NULL, true);
+        }
 
         // Scheme A: Erase old selected entities if handles provided
         for (const auto& hStr : eraseHandles)
@@ -53,7 +73,7 @@ namespace NS_CadTable
         int numCols = 2; // Key, Value
 
         ZcDbTable* pTable = new ZcDbTable();
-        pTable->setDatabaseDefaults();
+        pTable->setDatabaseDefaults(pDb);
         pTable->setSize(numRows, numCols);
 
         double rowHeight = 8.0;
@@ -83,37 +103,50 @@ namespace NS_CadTable
         double totalHeight = numRows * rowHeight;
 
         // Alignment: Table Bottom Boundary = bbox.minY
-        // Top Y = bbox.minY + totalHeight
         ZcGePoint3d insertionPt(bbox.minX, bbox.minY + totalHeight, 0.0);
         pTable->setPosition(insertionPt);
 
         // Add to Block Table Record
         ZcDbBlockTable* pBlockTable = nullptr;
-        if (pDb->getBlockTable(pBlockTable, ZcDb::kForRead) != Zcad::eOk)
+        Zcad::ErrorStatus es = pDb->getBlockTable(pBlockTable, ZcDb::kForRead);
+        if (es != Zcad::eOk)
         {
+            if (pLockDoc) acDocManager->unlockDocument(pLockDoc);
             delete pTable;
+            outError = "getBlockTable failed with status code: " + std::to_string((int)es);
             return false;
         }
 
         ZcDbBlockTableRecord* pModelSpace = nullptr;
-        if (pBlockTable->getAt(ZCDB_MODEL_SPACE, pModelSpace, ZcDb::kForWrite) != Zcad::eOk)
+        es = pBlockTable->getAt(ZCDB_MODEL_SPACE, pModelSpace, ZcDb::kForWrite);
+        if (es != Zcad::eOk)
         {
             pBlockTable->close();
+            if (pLockDoc) acDocManager->unlockDocument(pLockDoc);
             delete pTable;
+            outError = "getAt(ZCDB_MODEL_SPACE) failed with status code: " + std::to_string((int)es);
             return false;
         }
         pBlockTable->close();
 
         ZcDbObjectId tableId;
-        if (pModelSpace->appendZcDbEntity(tableId, pTable) != Zcad::eOk)
+        es = pModelSpace->appendZcDbEntity(tableId, pTable);
+        if (es != Zcad::eOk)
         {
             pModelSpace->close();
+            if (pLockDoc) acDocManager->unlockDocument(pLockDoc);
             delete pTable;
+            outError = "appendZcDbEntity failed with status code: " + std::to_string((int)es);
             return false;
         }
 
         pTable->close();
         pModelSpace->close();
+
+        if (pLockDoc)
+        {
+            acDocManager->unlockDocument(pLockDoc);
+        }
         return true;
     }
 }
