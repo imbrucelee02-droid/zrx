@@ -145,19 +145,25 @@ namespace NS_ZrxHttp
             return res.dump();
         }
 
-        // Endpoint 1: Trigger REAL CAD Box-Selection & Extract 26-fields
+        // Endpoint 1: Trigger REAL CAD Box-Selection & Extract Dify 26-fields
         if (path == "/api/select_and_process" && method == "POST")
         {
             try {
-                nlohmann::json req = nlohmann::json::parse(body);
-                int mode = req.value("convert_mode", 1); // 1: BOM, 2: TitleBlock
+                int mode = 0; // Default to TitleBlock mode 0
+                if (!body.empty())
+                {
+                    try {
+                        nlohmann::json req = nlohmann::json::parse(body);
+                        mode = req.value("convert_mode", 0);
+                    } catch (...) {}
+                }
 
-                // Execute real CAD viewport selection
+                // Execute real CAD viewport selection & Dify OCR
                 NS_CadSelect::SelectResult selRes = NS_CadSelect::CadSelectProcessor::ExecuteRealSelection(mode);
                 if (selRes.success)
                 {
                     res["success"] = true;
-                    res["message"] = "Real CAD selection and processing completed";
+                    res["message"] = "Real CAD selection and Dify processing completed";
                     res["convert_mode"] = mode;
                     res["bbox"] = {
                         { "min_x", selRes.bbox.minX },
@@ -171,7 +177,7 @@ namespace NS_ZrxHttp
                 else
                 {
                     res["success"] = false;
-                    res["message"] = "CAD selection failed: " + selRes.errorMsg;
+                    res["message"] = "CAD selection/Dify error: " + selRes.errorMsg;
                 }
             }
             catch (std::exception& e) {
@@ -185,27 +191,36 @@ namespace NS_ZrxHttp
         if (path == "/api/writeback_table" && method == "POST")
         {
             try {
-                nlohmann::json req = nlohmann::json::parse(body);
-                int mode = req.value("convert_mode", 1);
-                int style = req.value("style_type", 1);
-                
-                nlohmann::json bboxJson = req.contains("bbox") ? req["bbox"] : nlohmann::json::object();
-                nlohmann::json fields = req.contains("fields") ? req["fields"] : nlohmann::json::object();
-
+                int mode = 0;
+                int style = 1;
+                nlohmann::json bboxJson = nlohmann::json::object();
+                nlohmann::json fields = nlohmann::json::object();
                 std::vector<std::string> eraseHandles;
-                if (req.contains("erase_handles") && req["erase_handles"].is_array())
+
+                if (!body.empty())
                 {
-                    for (const auto& item : req["erase_handles"])
-                    {
-                        if (item.is_string()) eraseHandles.push_back(item.get<std::string>());
-                    }
-                }
-                else if (req.contains("selected_handles") && req["selected_handles"].is_array())
-                {
-                    for (const auto& item : req["selected_handles"])
-                    {
-                        if (item.is_string()) eraseHandles.push_back(item.get<std::string>());
-                    }
+                    try {
+                        nlohmann::json req = nlohmann::json::parse(body);
+                        mode = req.value("convert_mode", 0);
+                        style = req.value("style_type", 1);
+                        if (req.contains("bbox")) bboxJson = req["bbox"];
+                        if (req.contains("fields")) fields = req["fields"];
+
+                        if (req.contains("erase_handles") && req["erase_handles"].is_array())
+                        {
+                            for (const auto& item : req["erase_handles"])
+                            {
+                                if (item.is_string()) eraseHandles.push_back(item.get<std::string>());
+                            }
+                        }
+                        else if (req.contains("selected_handles") && req["selected_handles"].is_array())
+                        {
+                            for (const auto& item : req["selected_handles"])
+                            {
+                                if (item.is_string()) eraseHandles.push_back(item.get<std::string>());
+                            }
+                        }
+                    } catch (...) {}
                 }
 
                 NS_CadTable::BBox2D bbox;
