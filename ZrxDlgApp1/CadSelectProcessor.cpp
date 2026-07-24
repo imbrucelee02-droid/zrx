@@ -51,7 +51,7 @@ namespace NS_CadSelect
         result.bbox.maxX = maxPt.x;
         result.bbox.maxY = maxPt.y;
 
-        // Collect entities & handles from single box selection (NO SECONDARY PROMPT)
+        // Collect entities & handles from single box selection
         ads_name ss;
         ZcDbObjectIdArray idArray;
         int res = acedSSGet(L"C", pt1, pt2, NULL, ss);
@@ -118,18 +118,14 @@ namespace NS_CadSelect
         std::string ocrOutDir = isBomMode ? 
             "C:\\Users\\zwsoft\\Desktop\\transform\\BOM_testdata\\ocr_result_json\\" : "";
 
-        // 2. Execute 100% Native OCR Recognition (GetEntitysTableResult) exactly as AI_BOM_Convert does
-        acutPrintf(L"\n[AI Convert] Calling GetEntitysTableResult (OCR service)...");
+        // 2. Execute GetEntitysTableResult exactly as native AI_BOM_Convert does (Non-blocking)
+        acutPrintf(L"\n[AI Convert] Executing GetEntitysTableResult...");
         bool bOcrRet = NS_TableSum::GetEntitysTableResult(idArray, convertType, param,
             outTableInfoVecMap, outTextInfoVecMap, ocrOutDir, AcStringToUtf8(shortFileName));
 
         if (!bOcrRet)
         {
-            acutPrintf(L"\n[AI Convert] Table recognition failed in GetEntitysTableResult!");
-            result.success = false;
-            result.errorMsg = "GetEntitysTableResult OCR recognition failed";
-            pTask->pPromise->set_value(result);
-            return;
+            acutPrintf(L"\n[AI Convert] Notice: GetEntitysTableResult returned false, continuing to Dify Workflow...");
         }
 
         // 3. Prepare temp paths for Dify Workflow execution
