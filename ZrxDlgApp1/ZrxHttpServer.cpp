@@ -1,13 +1,13 @@
 #include "pch.h"
 #include "ZrxHttpServer.h"
-#include "CadTableWriter.h"
-#include "CadSelectProcessor.h"
-#include "AgentTableSum.h"
+#include "HTTP_Data.h"
+#include "HTTP_Function_List.h"
 #include "Common.h"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <sstream>
 #include <iostream>
+#include <fstream>
 #include <acdocman.h>
 
 #pragma comment(lib, "ws2_32.lib")
@@ -43,6 +43,56 @@ namespace NS_ZrxHttp
         {
             m_serverThread.detach();
         }
+    }
+
+    static void WaitCommandFinished()
+    {
+        if (CmdStatus_Success != HTTP_IO_Data::Instance().getState() &&
+            CmdStatus_Fail != HTTP_IO_Data::Instance().getState())
+        {
+            HTTP_IO_Data::Instance().wait();
+        }
+    }
+
+    static nlohmann::json process_cad_action(const std::string& action_name, const nlohmann::json& body_args, const std::string& success_msg)
+    {
+        nlohmann::json ret;
+        try
+        {
+            nlohmann::json query;
+            query["action"] = action_name;
+            query["arguments"] = body_args.is_null() ? nlohmann::json::object() : body_args;
+
+            HTTP_IO_Data::Instance().saveInput(query);
+
+            ZcString strCmd(_T("HTTP_TOOL"));
+            if (acDocManager && acDocManager->curDocument())
+            {
+                strCmd.append(_T(" "));
+                acDocManager->sendStringToExecute(acDocManager->curDocument(), strCmd, true, false, false);
+            }
+
+            WaitCommandFinished();
+
+            nlohmann::json result_data = HTTP_IO_Data::Instance().getOutput();
+
+            ret["success"] = (HTTP_IO_Data::Instance().getState() == CmdStatus_Success);
+            ret["message"] = success_msg;
+            ret["data"] = result_data;
+
+            HTTP_IO_Data::Instance().clear();
+        }
+        catch (std::exception& e)
+        {
+            ret["success"] = false;
+            ret["message"] = std::string("Gateway Exception: ") + e.what();
+        }
+        catch (...)
+        {
+            ret["success"] = false;
+            ret["message"] = "Unknown Gateway Exception";
+        }
+        return ret;
     }
 
     void ZrxHttpServer::ServerLoop(int port)
@@ -91,14 +141,14 @@ namespace NS_ZrxHttp
             SOCKET clientSock = accept(listenSock, NULL, NULL);
             if (clientSock == INVALID_SOCKET) continue;
 
-            char recvBuf[8192] = { 0 };
+            char recvBuf[16384] = { 0 };
             int bytesRecv = recv(clientSock, recvBuf, sizeof(recvBuf) - 1, 0);
             if (bytesRecv > 0)
             {
                 std::string reqStr(recvBuf, bytesRecv);
                 std::istringstream iss(reqStr);
-                std::string method, path, protocol;
-                iss >> method >> path >> protocol;
+                std::string method, path;
+                iss >> method >> path;
 
                 std::string body = "";
                 size_t bodyPos = reqStr.find("\r\n\r\n");
@@ -107,149 +157,103 @@ namespace NS_ZrxHttp
                     body = reqStr.substr(bodyPos + 4);
                 }
 
-                std::string jsonResp = HandleRequest(method, path, body);
+                nlohmann::json res;
 
-                std::ostringstream oss;
-                oss << "HTTP/1.1 200 OK\r\n";
-                oss << "Content-Type: application/json; charset=utf-8\r\n";
-                oss << "Access-Control-Allow-Origin: *\r\n";
-                oss << "Access-Control-Allow-Headers: *\r\n";
-                oss << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n";
-                oss << "Content-Length: " << jsonResp.length() << "\r\n";
-                oss << "Connection: close\r\n\r\n";
-                oss << jsonResp;
+                // OPTIONS Preflight
+                if (method == "OPTIONS")
+                {
+                    std::string optResponse =
+                        "HTTP/1.1 204 No Content\r\n"
+                        "Access-Control-Allow-Origin: *\r\n"
+                        "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+                        "Access-Control-Allow-Headers: Content-Type\r\n\r\n";
+                    send(clientSock, optResponse.c_str(), (int)optResponse.length(), 0);
+                    closesocket(clientSock);
+                    continue;
+                }
 
-                std::string fullResp = oss.str();
-                send(clientSock, fullResp.c_str(), (int)fullResp.length(), 0);
+                // Health check
+                if ((path == "/api/status" || path == "/hello") && method == "GET")
+                {
+                    res["status"] = "ok";
+                    res["plugin"] = "simple_table_prase.zrx";
+                    res["cad_version"] = "ZWCAD 2025";
+                }
+                // Endpoint 1: Dedicated BOM selection route
+                else if (path == "/api/select_bom" && method == "POST")
+                {
+                    nlohmann::json bodyArgs = nlohmann::json::object();
+                    if (!body.empty()) {
+                        try { bodyArgs = nlohmann::json::parse(body); } catch(...) {}
+                    }
+                    res = process_cad_action("select_bom", bodyArgs, "BOM selection & Dify processing completed");
+                }
+                // Endpoint 2: Dedicated TitleBlock selection route
+                else if (path == "/api/select_titleblock" && method == "POST")
+                {
+                    nlohmann::json bodyArgs = nlohmann::json::object();
+                    if (!body.empty()) {
+                        try { bodyArgs = nlohmann::json::parse(body); } catch(...) {}
+                    }
+                    res = process_cad_action("select_titleblock", bodyArgs, "TitleBlock selection & recognition completed");
+                }
+                // Endpoint 3: General select_and_process
+                else if (path == "/api/select_and_process" && method == "POST")
+                {
+                    int mode = 0;
+                    nlohmann::json bodyArgs = nlohmann::json::object();
+                    if (!body.empty()) {
+                        size_t fb = body.find('{'), lb = body.rfind('}');
+                        if (fb != std::string::npos && lb != std::string::npos && lb > fb) {
+                            try {
+                                bodyArgs = nlohmann::json::parse(body.substr(fb, lb - fb + 1));
+                                if (bodyArgs.contains("convert_mode")) {
+                                    if (bodyArgs["convert_mode"].is_number()) mode = bodyArgs["convert_mode"].get<int>();
+                                    else if (bodyArgs["convert_mode"].is_string()) mode = std::stoi(bodyArgs["convert_mode"].get<std::string>());
+                                }
+                            } catch(...) {}
+                        }
+                    }
+                    std::string actionName = (mode == 1) ? "select_bom" : "select_titleblock";
+                    res = process_cad_action(actionName, bodyArgs, "CAD selection & Dify processing completed");
+                }
+                // Endpoint 4: Writeback table route
+                else if (path == "/api/writeback_table" && method == "POST")
+                {
+                    nlohmann::json bodyArgs = nlohmann::json::object();
+                    if (!body.empty()) {
+                        size_t fb = body.find('{'), lb = body.rfind('}');
+                        if (fb != std::string::npos && lb != std::string::npos && lb > fb) {
+                            try { bodyArgs = nlohmann::json::parse(body.substr(fb, lb - fb + 1)); } catch(...) {}
+                        }
+                    }
+                    res = process_cad_action("writeback_table", bodyArgs, "Table writeback completed");
+                }
+                else
+                {
+                    res["success"] = false;
+                    res["error"] = "Route not found";
+                }
+
+                std::string resBody = res.dump(4);
+                std::ostringstream responseStream;
+                responseStream << "HTTP/1.1 200 OK\r\n"
+                               << "Content-Type: application/json\r\n"
+                               << "Access-Control-Allow-Origin: *\r\n"
+                               << "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+                               << "Access-Control-Allow-Headers: Content-Type\r\n"
+                               << "Content-Length: " << resBody.length() << "\r\n"
+                               << "\r\n"
+                               << resBody;
+
+                std::string httpResponse = responseStream.str();
+                send(clientSock, httpResponse.c_str(), (int)httpResponse.length(), 0);
             }
+
             closesocket(clientSock);
         }
 
         closesocket(listenSock);
         WSACleanup();
-    }
-
-    std::string ZrxHttpServer::HandleRequest(const std::string& method, const std::string& path, const std::string& body)
-    {
-        if (method == "OPTIONS")
-        {
-            return "{\"status\":\"ok\"}";
-        }
-
-        nlohmann::json res;
-        if (path == "/api/status")
-        {
-            res["status"] = "ok";
-            res["cad_version"] = "ZWCAD 2025";
-            res["plugin"] = "simple_table_prase.zrx";
-            return res.dump();
-        }
-
-        // Endpoint 1: Trigger REAL CAD Box-Selection & Extract Dify 26-fields
-        if (path == "/api/select_and_process" && method == "POST")
-        {
-            try {
-                int mode = 0; // Default to TitleBlock mode 0
-                if (!body.empty())
-                {
-                    try {
-                        nlohmann::json req = nlohmann::json::parse(body);
-                        mode = req.value("convert_mode", 0);
-                    } catch (...) {}
-                }
-
-                // Execute real CAD viewport selection & Dify OCR
-                NS_CadSelect::SelectResult selRes = NS_CadSelect::CadSelectProcessor::ExecuteRealSelection(mode);
-                if (selRes.success)
-                {
-                    res["success"] = true;
-                    res["message"] = "Real CAD selection and Dify processing completed";
-                    res["convert_mode"] = mode;
-                    res["bbox"] = {
-                        { "min_x", selRes.bbox.minX },
-                        { "min_y", selRes.bbox.minY },
-                        { "max_x", selRes.bbox.maxX },
-                        { "max_y", selRes.bbox.maxY }
-                    };
-                    res["selected_handles"] = selRes.selectedHandles;
-                    res["extracted_fields"] = selRes.extractedFields;
-                }
-                else
-                {
-                    res["success"] = false;
-                    res["message"] = "CAD selection/Dify error: " + selRes.errorMsg;
-                }
-            }
-            catch (std::exception& e) {
-                res["success"] = false;
-                res["message"] = std::string("Selection error: ") + e.what();
-            }
-            return res.dump();
-        }
-
-        // Endpoint 2: Accept Final Confirmed Data & Write Back ZcDbTable (Scheme A Real Erase)
-        if (path == "/api/writeback_table" && method == "POST")
-        {
-            try {
-                int mode = 0;
-                int style = 1;
-                nlohmann::json bboxJson = nlohmann::json::object();
-                nlohmann::json fields = nlohmann::json::object();
-                std::vector<std::string> eraseHandles;
-
-                if (!body.empty())
-                {
-                    try {
-                        nlohmann::json req = nlohmann::json::parse(body);
-                        mode = req.value("convert_mode", 0);
-                        style = req.value("style_type", 1);
-                        if (req.contains("bbox")) bboxJson = req["bbox"];
-                        if (req.contains("fields")) fields = req["fields"];
-
-                        if (req.contains("erase_handles") && req["erase_handles"].is_array())
-                        {
-                            for (const auto& item : req["erase_handles"])
-                            {
-                                if (item.is_string()) eraseHandles.push_back(item.get<std::string>());
-                            }
-                        }
-                        else if (req.contains("selected_handles") && req["selected_handles"].is_array())
-                        {
-                            for (const auto& item : req["selected_handles"])
-                            {
-                                if (item.is_string()) eraseHandles.push_back(item.get<std::string>());
-                            }
-                        }
-                    } catch (...) {}
-                }
-
-                NS_CadTable::BBox2D bbox;
-                bbox.minX = bboxJson.value("min_x", 0.0);
-                bbox.minY = bboxJson.value("min_y", 0.0);
-                bbox.maxX = bboxJson.value("max_x", 100.0);
-                bbox.maxY = bboxJson.value("max_y", 100.0);
-
-                std::string errStr;
-                bool bOk = NS_CadTable::CadTableWriter::WriteNativeTable(mode, style, bbox, fields, eraseHandles, errStr);
-                res["success"] = bOk;
-                if (bOk)
-                {
-                    res["message"] = "ZcDbTable created successfully and old entities erased";
-                }
-                else
-                {
-                    res["message"] = "Failed to write ZcDbTable: " + errStr;
-                    res["detail_error"] = errStr;
-                }
-            }
-            catch (std::exception& e) {
-                res["success"] = false;
-                res["message"] = std::string("Exception: ") + e.what();
-            }
-            return res.dump();
-        }
-
-        res["status"] = "not_found";
-        return res.dump();
     }
 }

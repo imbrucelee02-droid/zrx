@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -242,6 +242,8 @@
     <ClCompile Include="helloworld.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="ZrxDlgApp1.cpp" />
+    <ClCompile Include="HTTP_Data.cpp" />
+    <ClCompile Include="HTTP_Function_List.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -249,7 +251,9 @@
     <None Include="ZrxDlgApp1.def" />
   </ItemGroup>
   <ItemGroup>
-        <ClInclude Include="AgentTableSum.h" />
+    <ClInclude Include="HTTP_Data.h" />
+    <ClInclude Include="HTTP_Function_List.h" />
+    <ClInclude Include="AgentTableSum.h" />
     <ClInclude Include="CadTableWriter.h" />
     <ClInclude Include="CadSelectProcessor.h" />
     <ClInclude Include="ZrxHttpServer.h" />

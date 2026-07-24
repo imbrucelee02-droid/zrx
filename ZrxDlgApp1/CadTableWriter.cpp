@@ -9,7 +9,47 @@
 
 namespace NS_CadTable
 {
+    void CadTableWriter::WriteTaskFunc(void* pData)
+    {
+        WriteTaskData* pTask = static_cast<WriteTaskData*>(pData);
+        if (!pTask || !pTask->pPromise) return;
+
+        std::string err;
+        bool bRes = WriteNativeTableDirect(pTask->convertMode, pTask->styleType, pTask->bbox, pTask->fieldsData, pTask->eraseHandles, err);
+        pTask->outError = err;
+        pTask->pPromise->set_value(bRes);
+    }
+
     bool CadTableWriter::WriteNativeTable(int convertMode, int styleType, const BBox2D& bbox, const nlohmann::json& fieldsData, const std::vector<std::string>& eraseHandles, std::string& outError)
+    {
+        std::promise<bool> writePromise;
+        std::future<bool> writeFuture = writePromise.get_future();
+
+        WriteTaskData taskData;
+        taskData.convertMode = convertMode;
+        taskData.styleType = styleType;
+        taskData.bbox = bbox;
+        taskData.fieldsData = fieldsData;
+        taskData.eraseHandles = eraseHandles;
+        taskData.pPromise = &writePromise;
+
+        // Dispatch execution to CAD Main Thread (Application Context) to prevent cross-thread UI deadlock
+        acDocManager->executeInApplicationContext(WriteTaskFunc, &taskData);
+
+        std::future_status status = writeFuture.wait_for(std::chrono::seconds(30));
+        if (status == std::future_status::ready)
+        {
+            outError = taskData.outError;
+            return writeFuture.get();
+        }
+        else
+        {
+            outError = "WriteNativeTable timed out waiting for CAD main thread execution";
+            return false;
+        }
+    }
+
+    bool CadTableWriter::WriteNativeTableDirect(int convertMode, int styleType, const BBox2D& bbox, const nlohmann::json& fieldsData, const std::vector<std::string>& eraseHandles, std::string& outError)
     {
         outError.clear();
 
@@ -26,7 +66,7 @@ namespace NS_CadTable
             return false;
         }
 
-        // Lock Document for multi-threading safety
+        // Lock Document for thread safety
         ZcApDocument* pLockDoc = pDoc;
         if (pLockDoc)
         {

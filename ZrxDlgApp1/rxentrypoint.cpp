@@ -13,6 +13,7 @@
 
 #include "Common.h"
 #include "AgentTableSum.h"
+#include "HTTP_Function_List.h"
 #include <fstream>
 #include "nlohmann/json.hpp"
 using json = nlohmann::json;
@@ -44,7 +45,7 @@ int CreatLine()
 		return -1;
 	}
 
-	//???¨²??
+	//???Ãº??
 	pLine->setColorIndex(1);
 
 	//??????????
@@ -68,13 +69,13 @@ int CreatLine()
 	//??????????????????
 	ZcDbObjectId lineId;
 	pBlockTableRecord->appendZcDbEntity(lineId, pLine);
-	//????????????‰Ø
+	//????????????å£º
 	pBlockTableRecord->close();
 	pLine->close();
 	return 0;
 }
 
-// task3-1.????????????ÈÉ???????????????????????.
+// task3-1.????????????å£¬???????????????????????.
 void CreateRedLineCmd()
 {
 	//TODO...
@@ -158,7 +159,7 @@ void AiTableRecognizeCmd()
 
 	acutPrintf(_T("\nCalling AI recognition service, please wait..."));
 	bool bRet = NS_TableSum::GetEntitysTableResult(idArr, convertType, param,
-		outTableInfoVecMap, outTextInfoVecMap, "", AcStringToUtf8(shortFileName));
+		outTableInfoVecMap, outTextInfoVecMap, "C:\\Users\\zwsoft\\Desktop\\transform\\testdata\\ocr_result_json\\", AcStringToUtf8(shortFileName));
 
 	if (!bRet)
 	{
@@ -287,7 +288,40 @@ void AiTableRecognizeCmd()
 	}
 	aiJson["tables"] = tablesArray;
 	
-	ZcString exportDir = _T("C:\\Users\\zwsoft\\Desktop\\transform\\testdata\\±í¸ñÊ¶±ð½á¹û0629_cell_json\\");
+	if (tablesArray.empty() || (tablesArray.size() > 0 && tablesArray[0]["cells"].empty()))
+	{
+		json tableObj;
+		tableObj["handle_hex"] = "AI_TABLE_TEXTS";
+		json cellsArray = json::array();
+		int cellId = 0;
+		int rIdx = 0;
+		for (const auto& pair : outTextInfoVecMap)
+		{
+			for (const auto& txt : pair.second)
+			{
+				if (txt.m_textStr.empty()) continue;
+				json cellObj;
+				cellObj["cell_id"] = cellId++;
+				cellObj["text"] = AcStringToUtf8(AcString(txt.m_textStr.c_str()));
+				json rangeObj;
+				rangeObj["start_row"] = rIdx++;
+				rangeObj["end_row"] = rIdx;
+				rangeObj["start_col"] = 0;
+				rangeObj["end_col"] = 0;
+				cellObj["cell_range"] = rangeObj;
+				cellsArray.push_back(cellObj);
+			}
+		}
+		if (!cellsArray.empty())
+		{
+			tableObj["cells"] = cellsArray;
+			tablesArray.clear();
+			tablesArray.push_back(tableObj);
+			aiJson["tables"] = tablesArray;
+		}
+	}
+
+	ZcString exportDir = _T("C:\\Users\\zwsoft\\Desktop\\transform\\testdata\\cell_json\\");
 	CreateSingleDirectory(exportDir);
 
 	std::wstring outFile = exportDir.kTCharPtr();
@@ -518,6 +552,39 @@ void AiBomConvertCmd()
 		}
 	}
 	aiJson["tables"] = tablesArray;
+
+	if (tablesArray.empty() || (tablesArray.size() > 0 && tablesArray[0]["cells"].empty()))
+	{
+		json tableObj;
+		tableObj["handle_hex"] = "AI_TABLE_TEXTS";
+		json cellsArray = json::array();
+		int cellId = 0;
+		int rIdx = 0;
+		for (const auto& pair : outTextInfoVecMap)
+		{
+			for (const auto& txt : pair.second)
+			{
+				if (txt.m_textStr.empty()) continue;
+				json cellObj;
+				cellObj["cell_id"] = cellId++;
+				cellObj["text"] = AcStringToUtf8(AcString(txt.m_textStr.c_str()));
+				json rangeObj;
+				rangeObj["start_row"] = rIdx++;
+				rangeObj["end_row"] = rIdx;
+				rangeObj["start_col"] = 0;
+				rangeObj["end_col"] = 0;
+				cellObj["cell_range"] = rangeObj;
+				cellsArray.push_back(cellObj);
+			}
+		}
+		if (!cellsArray.empty())
+		{
+			tableObj["cells"] = cellsArray;
+			tablesArray.clear();
+			tablesArray.push_back(tableObj);
+			aiJson["tables"] = tablesArray;
+		}
+	}
 	
 	ZcString exportDir = _T("C:\\Users\\zwsoft\\Desktop\\transform\\BOM_testdata\\cell_json\\");
 	CreateSingleDirectory(exportDir);
@@ -564,30 +631,22 @@ void initapp()
 {
 	CZcModuleResourceOverride resOverride;
 
-	////for test
 	zcedRegCmds->addCommand(cmd_group_name, _T("helloworld"), _T("helloworld"), ZCRX_CMD_MODAL, helloworld);
-
 	zcedRegCmds->addCommand(cmd_group_name, _T("create_red_line"), _T("create_red_line"), ZCRX_CMD_MODAL, CreateRedLineCmd);
-
-	//????¡¤???§Ò???????json
 	zcedRegCmds->addCommand(cmd_group_name, _T("PRASE_PATH_TABLE_JSON"), _T("PRASE_PATH_TABLE_JSON"), ZCRX_CMD_MODAL, PraseTables2);
-
-	//AI table recognition: window-select entities, send to AI service, get table/text results
 	zcedRegCmds->addCommand(cmd_group_name, _T("AI_TABLE_RECOGNIZE"), _T("AI_TABLE_RECOGNIZE"), ZCRX_CMD_MODAL, AiTableRecognizeCmd);
-
-	//AI BOM standard conversion command
-		zcedRegCmds->addCommand(cmd_group_name, _T("AI_BOM_Convert"), _T("AI_BOM_Convert"), ZCRX_CMD_MODAL, AiBomConvertCmd);
+	zcedRegCmds->addCommand(cmd_group_name, _T("AI_BOM_Convert"), _T("AI_BOM_Convert"), ZCRX_CMD_MODAL, AiBomConvertCmd);
 	zcedRegCmds->addCommand(cmd_group_name, _T("AI_Convert"), _T("AI_Convert"), ZCRX_CMD_MODAL, AiConvertCmd);
-}
 
+	// Register HTTP Tool command (transparent CAD command triggered via sendStringToExecute)
+	acedRegCmds->addCommand(cmd_group_name, _T("HTTP_TOOL"), _T("HTTP_TOOL"), ACRX_CMD_TRANSPARENT, HttpToolCmd);
+}
 
 void unloadapp()
 {
 	Zcad::ErrorStatus ret = zcedRegCmds->removeGroup(cmd_group_name);
-
-	int x = 1;
+	NS_ZrxHttp::ZrxHttpServer::Instance().Stop();
 }
-
 
 extern "C" ZcRx::AppRetCode zcrxEntryPoint(ZcRx::AppMsgCode msg, void* appId)
 {
@@ -595,12 +654,13 @@ extern "C" ZcRx::AppRetCode zcrxEntryPoint(ZcRx::AppMsgCode msg, void* appId)
 	{
 		case ZcRx::kInitAppMsg:
 		{
+			InitHttpFunc();
+			NS_ZrxHttp::ZrxHttpServer::Instance().Start(18088);
 
 			initapp();
 
-			zcrxDynamicLinker->unlockApplication(appId); //????§Ø??
-			zcrxDynamicLinker->registerAppMDIAware(appId); //
-
+			zcrxDynamicLinker->unlockApplication(appId);
+			zcrxDynamicLinker->registerAppMDIAware(appId);
 		}
 		break;
 		case ZcRx::kUnloadAppMsg:
