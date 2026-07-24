@@ -11,7 +11,6 @@
 #include <sstream>
 #include <thread>
 #include <chrono>
-#include <filesystem>
 
 // Declarations of native CAD commands from rxentrypoint.cpp
 extern void AiBomConvertCmd();
@@ -76,14 +75,31 @@ namespace NS_CadSelect
         {
             try {
                 nlohmann::json respJson = nlohmann::json::parse(resultJsonStr);
+                nlohmann::json outObj;
                 if (respJson.contains("data") && respJson["data"].contains("outputs"))
                 {
-                    result.extractedFields = respJson["data"]["outputs"];
+                    outObj = respJson["data"]["outputs"];
                 }
                 else
                 {
-                    result.extractedFields = respJson;
+                    outObj = respJson;
                 }
+
+                // If output field contains a nested escaped JSON string, parse it automatically
+                if (outObj.contains("output") && outObj["output"].is_string())
+                {
+                    try {
+                        outObj["output"] = nlohmann::json::parse(outObj["output"].get<std::string>());
+                    } catch(...) {}
+                }
+                else if (outObj.is_string())
+                {
+                    try {
+                        outObj = nlohmann::json::parse(outObj.get<std::string>());
+                    } catch(...) {}
+                }
+
+                result.extractedFields = outObj;
                 result.success = true;
             } catch (std::exception& e) {
                 result.success = false;
