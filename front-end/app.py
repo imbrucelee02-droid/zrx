@@ -132,9 +132,8 @@ def apply_cad_theme():
         header[data-testid="stHeader"] { background-color: #2b3035; border-bottom: 1px solid #1e2227; }
         .stApp h1,.stApp h2,.stApp h3,.stApp h4,.stApp p,.stApp li,.stApp span,.stApp label,
         .stApp div[data-testid="stMarkdownContainer"] { color: #fff !important; }
-        .stApp h1 { color: #fff !important; font-weight: 600; }
-        .stApp h2 { color: #fff !important; font-weight: 600; }
-        .stApp h3 { color: #fff !important; font-weight: 500; }
+        .stApp h1 { color: #fff !important; font-weight: 600; font-size: 1.75rem !important; }
+        .stApp h2, .stApp h3 { color: #fff !important; font-weight: 600; font-size: 1.25rem !important; margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
         .stApp hr { border-color: #3a4149; opacity: 0.8; }
         .stApp button[kind="primary"] { background-color: #1f6fb2; color: #fff; border: 1px solid #165a91; font-weight: 500; }
         .stApp button[kind="primary"]:hover { background-color: #2a87d0; border-color: #1f6fb2; color: #fff; }
@@ -253,7 +252,7 @@ def render_step2(mode: str):
     # 自动触发 CAD 框选与识别，无需用户二次点击按钮
     if "has_triggered_select" not in st.session_state or not st.session_state.has_triggered_select:
         st.session_state.has_triggered_select = True
-        with st.spinner("🚀 正在激活 CAD 框选，请在中望 CAD 视口中拉框选择..."):
+        with st.spinner("🚀 请在中望 CAD 视口中拉框选择..."): 
             resp = call_select_and_process(mode)
 
         if not resp.get("success"):
@@ -312,7 +311,6 @@ def render_step3(mode: str):
     selected = st.selectbox("输出样式", options=styles, index=styles.index(recommended))
     st.session_state.selected_style = selected
 
-    st.subheader("数据编辑")
     if mode == "bom":
         edited = _render_bom_editor(raw_res)
     else:
@@ -346,7 +344,6 @@ def extract_bom_item_value(it_dict, std_key):
 
 def _render_bom_editor(items) -> list[dict]:
     """BOM 模式：多行物料表格编辑 (支持全量中英文及变体 Key 自动映射与 8 大标准列)"""
-    st.caption("双击编辑单元格，末行可新增行，支持拖拽列宽")
     if isinstance(items, str):
         try:
             items = json.loads(items)
