@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>常用实体的创建和编辑</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">常用实体的创建和编辑</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">常用实体的创建和编辑方法</p>
+<p class="define_text_1">本章节将介绍一些常用的实体，如<a href="#line">直线</a>、<a href="#circle">圆</a>（<a href="#arc">弧</a>）、<a href="#ellipse">椭圆（弧）</a>、<a href="#pline">多段线</a>、<a href="#text">文字</a>、<a href="#hatch">填充</a>、<a href="#table">表格</a>、<a href="#dim">标注</a>等等的创建方法。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="line">直线（Line）</p>
+<p class="define_head_1">下表列举了用于创建和编辑直线的常用接口：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbLine(
+    const ZcGePoint3d&amp; start, 
+    const ZcGePoint3d&amp; end
+);
+
+        </td>
+<td class="table-item-odd">使用起点和终点构造一条直线</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus setStartPoint(const ZcGePoint3d&amp;);</td>
+<td class="table-item-odd">设置直线的终点</td>
+</tr>
+<tr>
+<td class="table-item-odd">	ZcGePoint3d	startPoint() const;</td>
+<td class="table-item-odd">获取起点</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus setEndPoint(const ZcGePoint3d&amp;);</td>
+<td class="table-item-odd">设置直线的终点</td>
+</tr>
+<tr>
+<td class="table-item-odd">	ZcGePoint3d	endPoint() const;</td>
+<td class="table-item-odd">获取终点</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2">1. 创建直线</p>
+<pre class="code_sample">
+void drawLine()
+{ 
+	ZcGePoint3d startPt(4.0, 2.0, 0.0);
+	ZcGePoint3d endPt(10.0, 7.0, 0.0);
+	ZcDbLine *pLine = new ZcDbLine(startPt, endPt);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord,	ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId lineId;
+	pBlockTableRecord-&gt;appendZcDbEntity(lineId, pLine);
+
+	pBlockTableRecord-&gt;close();
+	pLine-&gt;close();
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间创建一条直线。</p>
+<p class="define_head_2">2. 编辑直线</p>
+<pre class="code_sample">
+void ModLine()
+{
+	ZcDbDatabase* pDb = zcdbHostApplicationServices()-&gt;workingDatabase();
+	if (pDb == NULL)
+	{
+		return;
+	}
+
+	ZcDbBlockTable* pBlockTable = NULL;
+	if (pDb-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead) != Zcad::eOk)
+	{
+		return;
+	}
+
+	ZcDbBlockTableRecord* pBlockRec = NULL;
+	if (pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockRec, ZcDb::kForRead) != Zcad::eOk)
+	{
+		pBlockTable-&gt;close();
+		return;
+	}
+
+	ZcDbBlockTableRecordIterator * pIterator = NULL;
+	pBlockRec-&gt;newIterator(pIterator);
+	pBlockRec-&gt;close();
+	pBlockTable-&gt;close();
+
+	for (; !pIterator-&gt;done(); pIterator-&gt;step())
+	{
+		ZcDbEntity * pEntity = NULL;
+		Zcad::ErrorStatus esGet = pIterator-&gt;getEntity(pEntity, ZcDb::kForWrite);
+		if (esGet != Zcad::eOk)
+		{
+			return;
+		}
+
+		if (!pEntity-&gt;isKindOf(ZcDbLine::desc()))
+		{
+			pEntity-&gt;close();
+			return;
+		}
+
+		ZcDbLine* pLine = (ZcDbLine*)pEntity;
+		pLine-&gt;setStartPoint(ZcGePoint3d(0, 100, 0));
+		pLine-&gt;setEndPoint(ZcGePoint3d(100, 0, 0));
+
+		pEntity-&gt;close();
+	}
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">遍历模型空间中所有直线，如果直线为红色则修改其起点和终点坐标。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="circle">圆（Circle）</p>
+<p class="define_head_1">下表列举了用于创建和编辑圆的常用接口：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbCircle(const ZcGePoint3d&amp; cntr, const ZcGeVector3d&amp; nrm, double radius);       
+        </td>
+<td class="table-item-odd">使用圆心、法向和半径构造一个圆</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcGePoint3d         center() const;</td>
+<td class="table-item-odd">读取圆心</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus   setCenter(const ZcGePoint3d&amp;);</td>
+<td class="table-item-odd">设置圆心</td>
+</tr>
+<tr>
+<td class="table-item-odd">double              radius() const;</td>
+<td class="table-item-odd">读取半径</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus   setRadius(double);</td>
+<td class="table-item-odd">设置半径</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2">1. 创建圆</p>
+<pre class="code_sample">
+ void drawCircle()
+{ 
+	ZcGePoint3d centerPoint(0.0, 0.0, 0.0);
+	double dRadius = 10.0;
+	ZcGeVector3d x = zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;ucsxdir();<br/>	ZcGeVector3d y = zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;ucsydir();<br/>	ZcGeVector3d normal = x.crossProduct(y);<br/>	normal.normalize();
+
+	ZcDbCircle *pCircle = new ZcDbCircle(centerPoint, normal, dRadius);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord,	ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId CircleId;
+	pBlockTableRecord-&gt;appendZcDbEntity(CircleId, pCircle);
+
+	pBlockTableRecord-&gt;close();
+	pCircle-&gt;close();
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间创建一个圆</p>
+<p class="define_head_2">2. 编辑圆</p>
+<pre class="code_sample">
+void ModCircle()
+{
+	ZcDbDatabase* pDb = zcdbHostApplicationServices()-&gt;workingDatabase();
+	if (pDb == NULL)
+	{
+		return;
+	}
+
+	ZcDbBlockTable* pBlockTable = NULL;
+	if (pDb-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead) != Zcad::eOk)
+	{
+		return;
+	}
+
+	ZcDbBlockTableRecord* pBlockRec = NULL;
+	if (pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockRec, ZcDb::kForRead) != Zcad::eOk)
+	{
+		pBlockTable-&gt;close();
+		return;
+	}
+
+	ZcDbBlockTableRecordIterator * pIterator = NULL;
+	pBlockRec-&gt;newIterator(pIterator);
+	pBlockRec-&gt;close();
+	pBlockTable-&gt;close();
+
+	for (; !pIterator-&gt;done(); pIterator-&gt;step())
+	{
+		ZcDbEntity * pEntity = NULL;
+		Zcad::ErrorStatus esGet = pIterator-&gt;getEntity(pEntity, ZcDb::kForWrite);
+		if (esGet != Zcad::eOk)
+		{
+			return;
+		}
+
+		if (!pEntity-&gt;isKindOf(ZcDbCircle::desc()))
+		{
+			pEntity-&gt;close();
+			return;
+		}
+
+		ZcDbCircle* pCircle = (ZcDbCircle*)pEntity;
+		pCircle-&gt;setCenter(ZcGePoint3d(100, 100, 0));
+		pCircle-&gt;setRadius(100.0);
+		
+		pEntity-&gt;close();
+	}
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">遍历模型空间中所有圆，如果圆为红色则修改其圆心和半径。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="arc">圆弧（Arc）</p>
+<p class="define_head_1">下表列举了用于创建和编辑圆弧的常用接口：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">    ZcDbArc(const ZcGePoint3d&amp; center, double radius,
+            double startAngle, double endAngle);
+        </td>
+<td class="table-item-odd">使用圆心、半径、起点角度和终点角度构造一个圆弧</td>
+</tr>
+<tr>
+<td class="table-item-odd">    ZcDbArc(const ZcGePoint3d&amp; center, const ZcGeVector3d&amp; normal,
+            double radius, double startAngle, double endAngle);
+        </td>
+<td class="table-item-odd">使用圆心、法向、半径、起点角度和终点角度构造一个圆弧</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcGePoint3d         center() const;</td>
+<td class="table-item-odd">读取圆心</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus   setCenter(const ZcGePoint3d&amp;);</td>
+<td class="table-item-odd">设置圆心</td>
+</tr>
+<tr>
+<td class="table-item-odd">double              radius() const;</td>
+<td class="table-item-odd">读取半径</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus   setRadius(double);</td>
+<td class="table-item-odd">设置半径</td>
+</tr>
+<tr>
+<td class="table-item-odd">double              startAngle() const;</td>
+<td class="table-item-odd">读取起始角度</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus   setStartAngle(double);</td>
+<td class="table-item-odd">设置起始角度</td>
+</tr>
+<tr>
+<td class="table-item-odd">double              endAngle() const;</td>
+<td class="table-item-odd">读取终止角度</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus   setEndAngle(double);</td>
+<td class="table-item-odd">设置终止角度</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2">1. 创建圆弧</p>
+<pre class="code_sample">
+void drawArc()
+{
+	ZcGePoint3d centerPoint(0.0, 0.0, 0.0);
+	double dRadius = 10.0;
+
+	double startAngle = 0.0; // 起始角度
+	double endAngle = 1.57; // 终止角度
+
+	ZcDbArc *pArc = new ZcDbArc(centerPoint, dRadius,startAngle,endAngle);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord, ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId ArcId;
+	pBlockTableRecord-&gt;appendZcDbEntity(ArcId, pArc);
+
+	pBlockTableRecord-&gt;close();
+	pArc-&gt;close();
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间创建一个圆弧</p>
+<p class="define_head_2">2. 编辑圆弧</p>
+<pre class="code_sample">
+   void ModArc()
+{
+	ZcDbDatabase* pDb = zcdbHostApplicationServices()-&gt;workingDatabase();
+	if (pDb == NULL)
+	{
+		return;
+	}
+
+	ZcDbBlockTable* pBlockTable = NULL;
+	if (pDb-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead) != Zcad::eOk)
+	{
+		return;
+	}
+
+	ZcDbBlockTableRecord* pBlockRec = NULL;
+	if (pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockRec, ZcDb::kForRead) != Zcad::eOk)
+	{
+		pBlockTable-&gt;close();
+		return;
+	}
+
+	ZcDbBlockTableRecordIterator * pIterator = NULL;
+	pBlockRec-&gt;newIterator(pIterator);
+	pBlockRec-&gt;close();
+	pBlockTable-&gt;close();
+
+	for (; !pIterator-&gt;done(); pIterator-&gt;step())
+	{
+		ZcDbEntity * pEntity = NULL;
+		Zcad::ErrorStatus esGet = pIterator-&gt;getEntity(pEntity, ZcDb::kForWrite);
+		if (esGet != Zcad::eOk)
+		{
+			return;
+		}
+
+		if (!pEntity-&gt;isKindOf(ZcDbArc::desc()))
+		{
+			pEntity-&gt;close();
+			return;
+		}
+
+		ZcDbArc* pArc = (ZcDbArc*)pEntity;
+		pArc-&gt;setCenter(ZcGePoint3d(100, 100, 0));
+		pArc-&gt;setRadius(100.0);
+		pArc-&gt;setStartAngle(0.2);
+		pArc-&gt;setEndAngle(2);
+		pEntity-&gt;close();
+	}
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">遍历模型空间中所有圆弧，如果圆为红色则修改其圆心、半径起始角度和终止角度，不为红色则删除</p>
+<hr algin="left"/>
+<p class="define_head_1" id="ellipse">椭圆（弧）（Ellipse）</p>
+<p class="define_head_1">下表列举了用于创建和编辑椭圆弧的常用接口：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">    ZcDbEllipse(const ZcGePoint3d&amp;  center,
+	        const ZcGeVector3d&amp; unitNormal,
+	        const ZcGeVector3d&amp; majorAxis,
+	        double              radiusRatio,
+	        double              startAngle = 0.0,
+	        double              endAngle   = 6.28318530717958647692);      
+        </td>
+<td class="table-item-odd">使用中心点心、法向、长轴向量、短轴比例、起始角度、终止角度构造一个椭圆弧</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcGePoint3d center() const;</td>
+<td class="table-item-odd">读取中心点</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus setCenter(const ZcGePoint3d&amp; center);</td>
+<td class="table-item-odd">设置中心点</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcGeVector3d majorAxis() const;</td>
+<td class="table-item-odd">读取长轴向量</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus setMajorRadius(double);</td>
+<td class="table-item-odd">设置长轴向量</td>
+</tr>
+<tr>
+<td class="table-item-odd">double radiusRatio() const;</td>
+<td class="table-item-odd">读取短轴比例</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus setRadiusRatio(double ratio);</td>
+<td class="table-item-odd">设置短轴比例</td>
+</tr>
+<tr>
+<td class="table-item-odd">double startAngle() const;</td>
+<td class="table-item-odd">读取起始角度</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus setStartAngle(double startAngle); </td>
+<td class="table-item-odd">设置起始角度</td>
+</tr>
+<tr>
+<td class="table-item-odd">double endAngle() const;</td>
+<td class="table-item-odd">读取终止角度</td>
+</tr>
+<tr>
+<td class="table-item-odd">Zcad::ErrorStatus setEndAngle(double endAngle);</td>
+<td class="table-item-odd">设置终止角度</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2">1. 创建椭圆</p>
+<pre class="code_sample">
+#define M_PI 3.14159265358979323846
+ void drawEllipse()
+{
+	ZcGePoint3d centerPoint(0.0, 0.0, 0.0);
+	double radiusRatio = 0.5;                     // 短轴与长轴比例（0.5表示短轴为50）
+	double startAngle = 0.0;                      // 起始角度（弧度）
+	double endAngle = 2 * M_PI;                // 终止角度（完整椭圆）
+	ZcGeVector3d vecNormal(0, 0, 1);
+	ZcGeVector3d majorAxis(40, 0, 0);
+
+	ZcDbEllipse* pEllipse = new ZcDbEllipse(centerPoint, vecNormal, majorAxis, radiusRatio, startAngle, endAngle);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord, ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId ArcId;
+	pBlockTableRecord-&gt;appendZcDbEntity(ArcId, pEllipse);
+
+	pBlockTableRecord-&gt;close();
+	pEllipse-&gt;close();
+}
+    </pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间创建一个水平长轴100、垂直短轴50的完整黄色椭圆</p>
+<p class="define_head_2">2. 编辑椭圆</p>
+<pre class="code_sample">
+void ModEllipse()
+{
+	ZcDbDatabase* pDb = zcdbHostApplicationServices()-&gt;workingDatabase();
+	if (pDb == NULL)
+	{
+		return;
+	}
+
+	ZcDbBlockTable* pBlockTable = NULL;
+	if (pDb-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead) != Zcad::eOk)
+	{
+		return;
+	}
+
+	ZcDbBlockTableRecord* pBlockRec = NULL;
+	if (pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockRec, ZcDb::kForRead) != Zcad::eOk)
+	{
+		pBlockTable-&gt;close();
+		return;
+	}
+
+	ZcDbBlockTableRecordIterator * pIterator = NULL;
+	pBlockRec-&gt;newIterator(pIterator);
+	pBlockRec-&gt;close();
+	pBlockTable-&gt;close();
+
+	for (; !pIterator-&gt;done(); pIterator-&gt;step())
+	{
+		ZcDbEntity * pEntity = NULL;
+		Zcad::ErrorStatus esGet = pIterator-&gt;getEntity(pEntity, ZcDb::kForWrite);
+		if (esGet != Zcad::eOk)
+		{
+			return;
+		}
+
+		if (!pEntity-&gt;isKindOf(ZcDbEllipse::desc()))
+		{
+			pEntity-&gt;close();
+			return;
+		}
+
+		ZcDbEllipse* pArc = (ZcDbEllipse*)pEntity;
+		pArc-&gt;setCenter(ZcGePoint3d(100, 100, 0));
+		pArc-&gt;setRadiusRatio(0.3);
+		pEntity-&gt;close();
+	}
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">遍历模型空间所有椭圆：<br/> 将圆心改成100,100,0 ，短轴改为0.3</p>
+<hr algin="left"/>
+<p class="define_head_1" id="pline">多段线（Polyline）</p>
+<p class="define_head_1">下表列举了用于创建和编辑多段线的常用接口：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">addVertexAt</td>
+<td class="table-item-odd">添加顶点：<br/>              (索引, ZcGePoint2d坐标, 凸度, 起点宽度, 终点宽度)</td>
+</tr>
+<tr>
+<td class="table-item-odd">setPointAt</td>
+<td class="table-item-odd">修改指定索引的顶点坐标</td>
+</tr>
+<tr>
+<td class="table-item-odd">setConstantWidth</td>
+<td class="table-item-odd">全局线宽（所有线段统一宽度）</td>
+</tr>
+<tr>
+<td class="table-item-odd">setClosed</td>
+<td class="table-item-odd">闭合属性（true自动连接首尾顶点）</td>
+</tr>
+<tr>
+<td class="table-item-odd">numVerts</td>
+<td class="table-item-odd">获取顶点数量</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2">1. 创建多段线</p>
+<pre class="code_sample"> void drawPolyline()
+{
+	ZcDbPolyline *pPoly = new ZcDbPolyline(4);
+	pPoly-&gt;addVertexAt(0, ZcGePoint2d(0,0), 0, 0, 0);
+	pPoly-&gt;addVertexAt(0, ZcGePoint2d(100, 0), 0, 0, 0);
+	pPoly-&gt;addVertexAt(0, ZcGePoint2d(100, 50), 0, 0, 0);
+	pPoly-&gt;addVertexAt(0, ZcGePoint2d(0, 50), 0, 0, 0);
+	pPoly-&gt;setClosed(ZSoft::kTrue);
+	pPoly-&gt;setColorIndex(5);
+	pPoly-&gt;setLineWeight(ZcDb::kLnWt005);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord, ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId plineId;
+	pBlockTableRecord-&gt;appendZcDbEntity(plineId, pPoly);
+
+	pBlockTableRecord-&gt;close();
+	pPoly-&gt;close();
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间创建一个闭合的蓝色四边形多段线，线宽为0.50mm</p>
+<p class="define_head_2">2. 编辑多段线</p>
+<pre class="code_sample"> 
+    void ModPolyline()
+{
+	ZcDbDatabase* pDb = zcdbHostApplicationServices()-&gt;workingDatabase();
+	if (pDb == NULL)
+	{
+		return;
+	}
+
+	ZcDbBlockTable* pBlockTable = NULL;
+	if (pDb-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead) != Zcad::eOk)
+	{
+		return;
+	}
+
+	ZcDbBlockTableRecord* pBlockRec = NULL;
+	if (pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockRec, ZcDb::kForRead) != Zcad::eOk)
+	{
+		pBlockTable-&gt;close();
+		return;
+	}
+
+	ZcDbBlockTableRecordIterator * pIterator = NULL;
+	pBlockRec-&gt;newIterator(pIterator);
+	pBlockRec-&gt;close();
+	pBlockTable-&gt;close();
+
+	for (; !pIterator-&gt;done(); pIterator-&gt;step())
+	{
+		ZcDbEntity * pEntity = NULL;
+		Zcad::ErrorStatus esGet = pIterator-&gt;getEntity(pEntity, ZcDb::kForWrite);
+		if (esGet != Zcad::eOk)
+		{
+			return;
+		}
+
+		if (!pEntity-&gt;isKindOf(ZcDbPolyline::desc()))
+		{
+			pEntity-&gt;close();
+			return;
+		}
+
+		ZcDbPolyline* pPoly = (ZcDbPolyline*)pEntity;
+		// 修改第二个顶点坐标(X:100→150)
+		pPoly-&gt;setPointAt(1,ZcGePoint2d(150, 0));
+		pPoly-&gt;setConstantWidth(2);// 设置全局宽度
+		pPoly-&gt;addVertexAt(4, ZcGePoint2d(50,75),0,0,0);
+		pPoly-&gt;close();
+	}
+}
+    </pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">遍历模型空间所有多段线：<br/> - 蓝色闭合多段线将被修改：第二个点X坐标改为150，添加第五个顶点(50,75)，线宽设为2.0mm<br/>
+</p>
+<hr algin="left"/>
+<p class="define_head_1" id="text">文字</p>
+<p class="define_head_1">文字分为单行文字（ZcDbText）和多行文字（ZcDbMText），下表列举了用于创建和编辑文字的常用接口：</p>
+<p class="define_head_2">单行文字</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">setPosition</td>
+<td class="table-item-odd">设置文字的位置点，当垂直对齐方式为TextBase且水平对齐方式为TextLeft、TextAlign或TextFit时控制文字的位置</td>
+</tr>
+<tr>
+<td class="table-item-odd">setAlignmentPoint</td>
+<td class="table-item-odd">设置文字的对齐点，当垂直、水平对齐方式不属于Position（位置点）生效的情况下控制文字的位置</td>
+</tr>
+<tr>
+<td class="table-item-odd">setHeight</td>
+<td class="table-item-odd">设置文字高度</td>
+</tr>
+<tr>
+<td class="table-item-odd">setRotation</td>
+<td class="table-item-odd">设置旋转角度</td>
+</tr>
+<tr>
+<td class="table-item-odd">setTextString</td>
+<td class="table-item-odd">设置文字内容</td>
+</tr>
+<tr>
+<td class="table-item-odd">setHorizontalMode</td>
+<td class="table-item-odd">设置水平对齐方式</td>
+</tr>
+<tr>
+<td class="table-item-odd">setVerticalMode</td>
+<td class="table-item-odd">设置垂直对齐方式</td>
+</tr>
+<tr>
+<td class="table-item-odd">setTextStyle</td>
+<td class="table-item-odd">设置文字样式名称</td>
+</tr>
+</table>
+<p class="define_head_2">多行文字</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">setLocation</td>
+<td class="table-item-odd">设置文字的位置点</td>
+</tr>
+<tr>
+<td class="table-item-odd">setTextHeight</td>
+<td class="table-item-odd">设置文字高度</td>
+</tr>
+<tr>
+<td class="table-item-odd">setRotation</td>
+<td class="table-item-odd">设置旋转角度</td>
+</tr>
+<tr>
+<td class="table-item-odd">setContents</td>
+<td class="table-item-odd">设置文字内容</td>
+</tr>
+<tr>
+<td class="table-item-odd">setAttachment</td>
+<td class="table-item-odd">设置对齐方式</td>
+</tr>
+<tr>
+<td class="table-item-odd">setHeight</td>
+<td class="table-item-odd">设置多行文字整体高度</td>
+</tr>
+<tr>
+<td class="table-item-odd">setWidth</td>
+<td class="table-item-odd">设置多行文字整体宽度</td>
+</tr>
+<tr>
+<td class="table-item-odd">setTextStyle</td>
+<td class="table-item-odd">设置文字样式Id</td>
+</tr>
+</table>
+<p class="define_head_2">1. 创建单行文字</p>
+<pre class="code_sample"> 
+void TextSample()
+{
+	ZcDbTextStyleTable* pTbl = NULL;
+	Zcad::ErrorStatus es = zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getTextStyleTable(pTbl, ZcDb::kForWrite);
+	if (Zcad::eOk != es)
+	{
+		return;
+	}
+	ZcDbTextStyleTableRecord* pRec = NULL;
+	es = pTbl-&gt;getAt(_T("Standard"), pRec, ZcDb::kForWrite);
+	if (Zcad::eOk != es)
+	{
+		return;
+	}
+	pTbl-&gt;close();
+
+	ZcDbText* pText = new ZcDbText();
+	pText-&gt;setPosition(ZcGePoint3d(0, 0, 0));
+	pText-&gt;setHeight(50);
+	pText-&gt;setRotation(0);
+	pText-&gt;setTextString(_T("TextSapmle"));
+	pText-&gt;setHorizontalMode(ZcDb::kTextLeft);
+	pText-&gt;setVerticalMode(ZcDb::kTextTop);
+	pText-&gt;setTextStyle(pRec-&gt;objectId());
+	AppendEntityToModelSpace(pText);
+	pRec-&gt;close();
+	pText-&gt;close();
+}
+    </pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间创建一个单行文字</p>
+<p class="define_head_2">2. 创建多行文字</p>
+<pre class="code_sample">
+void MTextSample()
+{
+	ZcDbTextStyleTable* pTbl = NULL;
+	Zcad::ErrorStatus es = zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getTextStyleTable(pTbl, ZcDb::kForRead);
+	if (Zcad::eOk != es)
+	{
+		return;
+	}
+	ZcDbTextStyleTableRecord* pRec = NULL;
+	es = pTbl-&gt;getAt(_T("Standard"), pRec, ZcDb::kForRead);
+	if (Zcad::eOk != es)
+	{
+		return;
+	}
+	pTbl-&gt;close();
+
+	ZcDbMText* pMText = new ZcDbMText();
+	pMText-&gt;setContents(_T("MTextSample"));
+	pMText-&gt;setTextStyle(pRec-&gt;objectId());
+	pMText-&gt;setLocation(ZcGePoint3d(0, 50, 0));
+	pMText-&gt;setTextHeight(50);
+	pMText-&gt;setRotation(0);
+	pMText-&gt;setAttachment(ZcDbMText::kMiddleLeft);
+	pMText-&gt;setWidth(200);
+	pMText-&gt;setHeight(100);
+	AppendEntityToModelSpace(pMText);
+	pRec-&gt;close();
+	pMText-&gt;close();
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间创建一个多行文字</p>
+<p class="define_head_2">3. 创建编辑文字样式</p>
+<pre class="code_sample"> 
+void TextStyleSample()
+{
+	ZcDbDatabase* pDb = curDoc()-&gt;database();
+	ZcDbTextStyleTable* pTextStyleTable = NULL;
+	pDb-&gt;getTextStyleTable(pTextStyleTable, ZcDb::kForRead);
+	if (pTextStyleTable &amp;&amp; pTextStyleTable-&gt;has(_T("new TextStyle")))
+	{
+		ZcDbTextStyleTableIterator* pIter = NULL;
+		pTextStyleTable-&gt;newIterator(pIter);
+		ZcDbTextStyleTableRecord* pRecord = NULL;
+		for (pIter-&gt;start(); !pIter-&gt;done(); pIter-&gt;step())
+		{
+			pIter-&gt;getRecord(pRecord, ZcDb::kForWrite);
+			if (pRecord)
+			{
+				ZcString strName;
+				pRecord-&gt;getName(strName);
+				if (strName == _T("new TextStyle"))
+				{
+					pRecord-&gt;setName(_T("Mod TextStyle"));
+					pRecord-&gt;setFileName(_T("simplex"));
+					pRecord-&gt;setBigFontFileName(_T(""));
+					pRecord-&gt;setTextSize(5);
+				}
+			}
+			pRecord-&gt;close();
+		}
+	}
+	else
+	{
+		ZcDbTextStyleTableRecord* pRecord = new ZcDbTextStyleTableRecord();
+		pRecord-&gt;setName(_T("new TextStyle"));
+		pRecord-&gt;setFileName(_T("txt"));
+		pRecord-&gt;setBigFontFileName(_T("GBCBIG"));
+		pRecord-&gt;setTextSize(10);
+		pTextStyleTable-&gt;upgradeOpen();
+		pTextStyleTable-&gt;add(pRecord);
+		pRecord-&gt;close();
+	}
+	pTextStyleTable-&gt;close();
+}
+    </pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">如果名为"new TxtStyle"的文字样式不存在，则创建文字样式，否则编辑已有的文字样式</p>
+<hr algin="left"/>
+<p class="define_head_1" id="hatch">填充（ZcDbHatch）</p>
+<p class="define_head_1">下表列举了用于创建和编辑填充的常用接口：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">appendLoop</td>
+<td class="table-item-odd">添加填充的轮廓</td>
+</tr>
+<tr>
+<td class="table-item-odd">setPattern</td>
+<td class="table-item-odd">设置填充图案</td>
+</tr>
+<tr>
+<td class="table-item-odd">evaluateHatch</td>
+<td class="table-item-odd">生成填充图形</td>
+</tr>
+<tr>
+<td class="table-item-odd">setElevation</td>
+<td class="table-item-odd">标高</td>
+</tr>
+<tr>
+<td class="table-item-odd">setAssociative</td>
+<td class="table-item-odd">填充关联性</td>
+</tr>
+<tr>
+<td class="table-item-odd">setHatchStyle</td>
+<td class="table-item-odd">填充的模式</td>
+</tr>
+</table>
+<p class="define_head_2">1. 创建填充</p>
+<pre class="code_sample">
+void CreateHatchTest()
+{
+    ZcDbObjectIdArray ids, idsRet;
+    if (RTNORM != SelectEntities(ids) || ids.length() == 0)
+        return;
+
+    std::map&lt;ZcDbObjectId, double&gt; idsMap;
+    for (int i = 0; i &lt; ids.length(); i++)
+    {
+        ZcDbEntity *pEnt = nullptr;
+        double dArea = 0.0;
+        Zcad::ErrorStatus es = zcdbOpenZcDbEntity(pEnt, ids[i], ZcDb::kForRead);
+        ((ZcDbCurve*)pEnt)-&gt;getArea(dArea);
+
+        idsMap.insert(std::pair&lt;ZcDbObjectId, double&gt;(ids[i], dArea));
+        pEnt-&gt;close();
+    }
+
+    std::vector&lt;std::pair&lt;ZcDbObjectId, double&gt;&gt; vec;
+    for (std::map&lt;ZcDbObjectId, double&gt;::iterator iter = idsMap.begin(); iter != idsMap.end(); iter++)
+        vec.push_back(std::pair&lt;ZcDbObjectId, double&gt;(iter-&gt;first, iter-&gt;second));
+    // Same type, boundary sorted by area
+    std::sort(vec.begin(), vec.end(), [](std::pair&lt;ZcDbObjectId, double&gt;&amp; a, std::pair&lt;ZcDbObjectId, double&gt;&amp; b) {return a.second &lt; b.second; });
+
+    ZcDbHatch *pHatch = new ZcDbHatch();
+    pHatch-&gt;setNormal(ZcGeVector3d::kZAxis);
+    pHatch-&gt;setElevation(0.0);
+    pHatch-&gt;setAssociative(ZSoft::kTrue);
+    pHatch-&gt;setPattern(ZcDbHatch::kPreDefined, _T("SOLID"));
+    zcedInitGet(NULL, _T("N O I"));
+    TCHAR szRet[32] = { 0 };
+    zcedGetKword(_T("Style type [Normal(N)/Outer(O)/Ignore(I)]:"), szRet);
+    if (_tcscmp(_T("N"), szRet) == 0)
+        pHatch-&gt;setHatchStyle(ZcDbHatch::kNormal);
+    else if (_tcscmp(_T("O"), szRet) == 0)
+        pHatch-&gt;setHatchStyle(ZcDbHatch::kOuter);
+    else if (_tcscmp(_T("I"), szRet) == 0)
+        pHatch-&gt;setHatchStyle(ZcDbHatch::kIgnore);
+
+    int nDep = 0;
+    std::vector&lt;std::pair&lt;ZcDbObjectId, double&gt;&gt;::iterator iter = vec.begin();
+    for (; iter != vec.end(); iter++)
+    {
+        if (nDep == vec.size() - 1)  // The outermost boundary
+        {
+            ZcDbObjectIdArray arrExternalId;
+            arrExternalId.append(iter-&gt;first);
+            pHatch-&gt;appendLoop(ZcDbHatch::kExternal, arrExternalId);
+        }
+        else if (nDep == vec.size() - 2) // The boundary of the penultimate outer layer
+        {
+            ZcDbObjectIdArray arrOutermostId;
+            arrOutermostId.append(iter-&gt;first);
+            pHatch-&gt;appendLoop(ZcDbHatch::kOutermost, arrOutermostId);
+        }
+        else
+        {
+            ZcDbObjectIdArray arrDefaultId;
+            arrDefaultId.append(iter-&gt;first);
+            pHatch-&gt;appendLoop(ZcDbHatch::kDefault, arrDefaultId);
+        }
+        nDep++;
+    }
+
+    pHatch-&gt;evaluateHatch();
+    ZcDbObjectId newId;
+    AppendToModalSpace(curDoc()-&gt;database(), pHatch, newId);
+    pHatch-&gt;close();
+}
+int SelectEntities(ZcDbObjectIdArray &amp; entIdArray)
+{
+	zds_name ss;
+	int ret = zcedSSGet(NULL, NULL, NULL, NULL, ss);
+	if (ret == RTNORM)
+	{
+		ZSoft::Int32 len = 0;
+		zcedSSLength(ss, &amp;len);
+		for (int i = 0; i &lt; len; i++)
+		{
+			zds_name ent;
+			ZcDbObjectId entId;
+			zcedSSName(ss, i, ent);
+			zcdbGetObjectId(entId, ent);
+			if (entId.isValid())
+			{
+				entIdArray.append(entId);
+			}
+		}
+		zcedSSFree(ss);
+	}
+	return ret;
+}
+
+Zcad::ErrorStatus AppendToModalSpace(ZcDbDatabase* db, ZcDbEntity* ent, ZcDbObjectId&amp; oid)
+{
+	if (!db)
+		return Zcad::eNoDatabase;
+	if (!ent)
+		return Zcad::eNullObjectPointer;
+
+	Zcad::ErrorStatus stats = Zcad::eOk;
+	ZcDbBlockTable* pBlockTable = NULL;
+	stats = db-&gt;getBlockTable(pBlockTable, ZcDb::kForRead);
+	if (pBlockTable)
+	{
+		ZcDbBlockTableRecord* pBTR = NULL;
+		stats = pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBTR, ZcDb::kForWrite);
+		pBlockTable-&gt;close();
+		pBlockTable = NULL;
+		if (pBTR)
+		{
+			stats = pBTR-&gt;appendZcDbEntity(oid, ent);
+			pBTR-&gt;close();
+		}
+	}
+	return stats;
+}
+    </pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间选择一些封闭多段线创建填充</p>
+<hr algin="left"/>
+<p class="define_head_1" id="table">表格（ZcDbTable）</p>
+<p class="define_head_1">下表列举了用于创建和编辑表格的常用接口：</p>
+<table class="table-desc">
+<tr>
+<th>方法/属性</th>
+<th>说明</th>
+</tr>
+<tr>
+<td>setSize</td>
+<td>初始化表格行列数（包含标题行）</td>
+</tr>
+<tr>
+<td>setTextString</td>
+<td>设置单元格内容（行列索引从0开始）</td>
+</tr>
+<tr>
+<td>mergeCells</td>
+<td>合并单元格范围</td>
+</tr>
+<tr>
+<td>insertRows</td>
+<td>插入新行</td>
+</tr>
+<tr>
+<td>insertColumns</td>
+<td>插入新列</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2">1. 创建表格</p>
+<pre class="code_sample"> 
+void CreateTable()
+{
+		zcutPrintf(_T("\nTrying to draw a table perfectly centered at (0,0)"));
+
+		ZcDbTable *pTbl = new ZcDbTable;
+
+		Zcad::ErrorStatus es;
+		es = pTbl-&gt;setSize(3, 2); // 3 rows, 2 columns
+		es = pTbl-&gt;setColumnWidth(0, 40.0);
+		es = pTbl-&gt;setColumnWidth(1, 20.0);
+
+		// Title
+		es = pTbl-&gt;mergeCells(0, 0, 0, 1);
+		es = pTbl-&gt;setTextString(0, 0, _T("This table dimensions :"));
+
+		// First column
+		es = pTbl-&gt;setTextString(1, 0, _T("Width"));
+		es = pTbl-&gt;setTextString(2, 0, _T("Height"));
+
+		es = pTbl-&gt;generateLayout(); // supposed to update pTbl-&gt;width() and pTbl-&gt;height()
+
+		// Second column
+		CString sTxt;
+		sTxt.Format(_T("%.1f"), pTbl-&gt;width());
+		es = pTbl-&gt;setTextString(1, 1, sTxt);
+		sTxt.Format(_T("%.1f"), pTbl-&gt;height());
+		es = pTbl-&gt;setTextString(2, 1, sTxt);
+
+		// Centers the table at (0,0)
+		const ZcGePoint3d pt(-pTbl-&gt;width() / 2, pTbl-&gt;height() / 2, 0.0);
+		es = pTbl-&gt;setPosition(pt);
+
+		ZcDbObjectId Id;
+		es = AppendEntity(pTbl, Id);
+		if (es == Zcad::eOk)
+			es = pTbl-&gt;close();
+		else
+		{
+			delete pTbl;
+			return;
+		}
+
+
+		// Further tests :
+		ZcDbObjectPointer&lt;ZcdbTable&gt; pEnt(Id, ZcDb::kForRead);
+		if ((es = pEnt.openStatus()) == Zcad::eOk)
+		{
+			zcutPrintf(_T("\nAfter appending the table to the drawing, pTbl-&gt;width () = %.1f and pTbl-&gt;height() = %.1f."), pTbl-&gt;width(), pTbl-&gt;height());
+		}
+}
+
+Zcad::ErrorStatus AppendEntity(ZcDbEntity* pEntity, ZcDbObjectId &amp;Id)
+{
+	Zcad::ErrorStatus es = Zcad::eNullPtr;
+	if (!pEntity)
+		return es;
+
+	ZcDbDatabase* pDB = zcdbHostApplicationServices()-&gt;workingDatabase();
+	if (!pDB)
+		return es;
+
+	ZcDbSymbolTable* pTbl = nullptr;
+	if ((es = pDB-&gt;getBlockTable(pTbl, ZcDb::kForRead)) != Zcad::eOk)
+		return es;
+
+	ZcDbSymbolTableRecord* pRec = nullptr;
+	if ((es = pTbl-&gt;getAt(ZCDB_MODEL_SPACE, pRec, ZcDb::kForWrite)) == Zcad::eOk)
+	{
+		es = ZcDbBlockTableRecord::cast(pRec)-&gt;appendZcDbEntity(Id, pEntity);
+		pRec-&gt;close();
+	}
+	pTbl-&gt;close();
+
+	return es;
+}
+    </&lt;ZcDbTable&gt;></pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间创建一个5行4列的表格，包含红色背景的标题行和示例数据</p>
+<hr algin="left"/>
+<p class="define_head_1" id="dim">标注</p>
+<p class="define_head_1">下表列举了用于创建和编辑常见标注/引线实体的常用接口：</p>
+<table class="table-desc">
+<tr>
+<th>标注类型</th>
+<th>常用接口</th>
+</tr>
+<tr>
+<td><a href="#AlignedDimension">ZcDbAlignedDimension</a></td>
+<td>setXLine1Point/setXLine2Point：尺寸界线原点<br/>
+            setDimLinePoint：标注线位置</td>
+</tr>
+<tr>
+<td><a href="#RadialDimension">ZcDbRadialDimension</a></td>
+<td>setCenter/setChordPoint：圆心和弦点<br/>
+            setLeaderLength：引导线长度</td>
+</tr>
+<tr>
+<td><a href="#Point3AngularDimension">ZcDb3PointAngularDimension</a></td>
+<td>setCenterPoint：角度的顶点，即两条边的交点<br/>
+            setXLine1Point/setXLine2Point：定义角度的两条边的终点<br/>
+            setArcPoint：标注文字的位置</td>
+</tr>
+<tr>
+<td><a href="#MLeader">ZcDbMLeader</a></td>
+<td>addLeaderLine()：添加引线分支<br/>
+            setMText：引线文字<br/>
+            setLandingGap：设置折弯间隙</td>
+</tr>
+<tr>
+<td>公共属性</td>
+<td>DimensionText：显示文字<br/>TextPosition：文字位置<br/>DimensionStyle：标注样式的Id<br/>Dimscale：全局比例</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<!-- 对齐标注 -->
+<p class="define_head_2" id="AlignedDimension">1. 创建对齐标注</p>
+<pre class="code_sample">
+void CreateAlignedDim()
+{
+	ZcGePoint3d pt1(200, 160, 0);
+	ZcGePoint3d pt2(160, 160, 0);
+	ZcGePoint3d pt3(180, 160, 0);
+	ZcDbAlignedDimension *pDim = new ZcDbAlignedDimension(pt1, pt2,
+		pt3, TEXT("new AlignedDim"),ZcDbObjectId::kNull);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord, ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId ArcId;
+	pBlockTableRecord-&gt;appendZcDbEntity(ArcId, pDim);
+
+	pBlockTableRecord-&gt;close();
+	pDim-&gt;close();
+}</pre>
+<!-- 半径标注 -->
+<p class="define_head_2" id="RadialDimension">2. 创建半径标注</p>
+<pre class="code_sample">
+void CreateRadialDim()
+{
+	ZcGePoint3d ptCenter(0, 0, 0);
+	ZcGePoint3d ptChord(50, 0, 0);
+	ZcDbRadialDimension *pDim = new ZcDbRadialDimension(ptCenter,
+			ptChord, 20, TEXT("new RadialDimension"), ZcDbObjectId::kNull);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord, ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId ArcId;
+	pBlockTableRecord-&gt;appendZcDbEntity(ArcId, pDim);
+
+	pBlockTableRecord-&gt;close();
+	pDim-&gt;close();
+}   </pre>
+<p class="define_head_2" id="Point3AngularDimension">3. 创建角度标注</p>
+<pre class="code_sample">
+void CreateAngularDim()
+{
+	ZcGePoint3d ptCenter(0, 0, 0);
+	ZcGePoint3d ptEnd1(100, 0, 0);
+	ZcGePoint3d ptEnd2(0, 100, 0);
+	ZcGePoint3d ptArc(50, 50, 0);
+	ZcDb3PointAngularDimension *pDim = new ZcDb3PointAngularDimension(
+		ptCenter, ptEnd1, ptEnd2, ptArc, TEXT("new AngularDim"), ZcDbObjectId::kNull);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord, ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId ArcId;
+	pBlockTableRecord-&gt;appendZcDbEntity(ArcId, pDim);
+
+	pBlockTableRecord-&gt;close();
+	pDim-&gt;close();
+}    </pre>
+<!-- 多重引线 -->
+<p class="define_head_2" id="MLeader">4. 创建多重引线</p>
+<pre class="code_sample">
+void CreateMLeader()
+{
+	ZcDbMLeader* pLeader = new ZcDbMLeader();
+	if (!pLeader) { return; }
+	int i = 0;
+	pLeader-&gt;setDatabaseDefaults();
+	Zcad::ErrorStatus es;
+	ZcGePoint3d px(100, 50, 0);
+	es = pLeader-&gt;addLeaderLine(px, i);
+	es = pLeader-&gt;addLastVertex(0, ZcGePoint3d(120, 70, 0));
+	pLeader-&gt;setContentType(ZcDbMLeaderStyle::kMTextContent);
+	ZcDbMText* pMText = new ZcDbMText();
+	pMText-&gt;setContents(_T("New\nMTextSample"));
+	pLeader-&gt;setMText(pMText);
+	pLeader-&gt;setTextHeight(2);
+	pLeader-&gt;setLandingGap(2);
+
+	ZcDbBlockTable *pBlockTable;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+
+	ZcDbBlockTableRecord *pBlockTableRecord;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord, ZcDb::kForWrite);
+	pBlockTable-&gt;close();
+
+	ZcDbObjectId ArcId;
+	pBlockTableRecord-&gt;appendZcDbEntity(ArcId, pLeader);
+
+	pBlockTableRecord-&gt;close();
+	pLeader-&gt;close();
+}  </pre>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

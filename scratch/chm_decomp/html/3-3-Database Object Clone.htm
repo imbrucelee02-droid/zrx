@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>数据库对象的复制</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">数据库对象的复制</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">数据库对象的复制</p>
+<p class="define_text_1">本章节将介绍如何复制数据库对象。数据库对象的复制分为DeepClone和WblockClone两种，分别对应同一个数据库内的复制和不同数据库之间的复制操作。</p>
+<p class="define_head_2">下表列举了进行数据库对象的复制操作需要用到的接口：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#sample1">ZcDbDatabase::deepCloneObjects</a></td>
+<td class="table-item-odd">在同一个数据库中复制对象</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#sample2">ZcDbDatabase::wblock</a></td>
+<td class="table-item-odd">把对象复制到新的数据库</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#sample3">ZcDbDatabase::wblockCloneObjects</a></td>
+<td class="table-item-odd">把对象复制到另一个数据库</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2" id="sample1">1. 在同一个数据库中复制对象</p>
+<pre class="code_sample">
+void DeepCloneDiffOwnerObjects()
+{
+	zds_name sssetMS, sssetPS;
+	ZdInt32 lengthMS = 0, lengthPS = 0;
+	const ZTCHAR* promptPtrs1[2] = { _T("\nSelect entities to clone(clone to the model space): ") , _T("") };
+	const ZTCHAR* promptPtrs2[2] = { _T("\nSelect entities to clone(clone to the paper space): "), _T("") };
+
+	if (RTNORM != zcedSSGet(_T(":$"), promptPtrs1, NULL, NULL, sssetMS))
+		return;
+	zcedSSLength(sssetMS, &amp;lengthMS);
+
+	if (RTNORM != zcedSSGet(_T(":$"), promptPtrs2, NULL, NULL, sssetPS))
+		return;
+	zcedSSLength(sssetPS, &amp;lengthPS);
+
+	ZcDbObjectId ownerId = ZcDbObjectId::kNull;
+	ZcDbObjectIdArray idListMS;
+	for (int i = 0; i &lt; lengthMS; i++)
+	{
+		zds_name ent;
+		zcedSSName(sssetMS, i, ent);
+		ZcDbObjectId objId;
+		zcdbGetObjectId(objId, ent);
+
+		ZcDbObject* pObj = NULL;
+		zcdbOpenObject(pObj, objId, ZcDb::kForRead);
+		if (pObj-&gt;ownerId() == ownerId)
+		{
+			idListMS.append(objId);
+		}
+		else if (i == 0)
+		{
+			ownerId = pObj-&gt;ownerId();
+			idListMS.append(objId);
+		}
+		pObj-&gt;close();
+	}
+	zcedSSFree(sssetMS);
+
+	ownerId = ZcDbObjectId::kNull;
+	ZcDbObjectIdArray idListPS;
+	for (int i = 0; i &lt; lengthPS; i++)
+	{
+		zds_name ent;
+		zcedSSName(sssetPS, i, ent);
+		ZcDbObjectId objId;
+		zcdbGetObjectId(objId, ent);
+
+		ZcDbObject* pObj = NULL;
+		zcdbOpenObject(pObj, objId, ZcDb::kForRead);
+		if (pObj-&gt;ownerId() == ownerId)
+		{
+			idListPS.append(objId);
+		}
+		else if (i == 0)
+		{
+			ownerId = pObj-&gt;ownerId();
+			idListPS.append(objId);
+		}
+		pObj-&gt;close();
+	}
+	zcedSSFree(sssetPS);
+
+	ZcDbBlockTable* pBlockTable = NULL;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;getSymbolTable(pBlockTable, ZcDb::kForRead);
+	ZcDbObjectId modelSpaceId, paperSpaceId;
+	pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, modelSpaceId);
+	pBlockTable-&gt;getAt(ZCDB_PAPER_SPACE, paperSpaceId);
+	pBlockTable-&gt;close();
+
+	ZcDbIdMapping idMap;
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;deepCloneObjects(idListMS, modelSpaceId, idMap);
+	zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;deepCloneObjects(idListPS, paperSpaceId, idMap);
+
+	ZcDbIdMappingIter iter(idMap);
+	for (iter.start(); !iter.done(); iter.next())
+	{
+		ZcDbIdPair idPair;
+		iter.getMap(idPair);
+		if (!idPair.isCloned())
+		{
+			continue;
+		}
+
+		zcutPrintf(_T("\nID of object：%Ld"), idPair.value().asOldId());
+	}
+}
+</pre>
+<p class="define_text_1">注意：需要添加头文件：#include"zdbidmap.h"</p>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">让用户分别选择要复制到同一个数据库的模型空间和图纸空间的实体，然后进行复制，最后命令行输出新实体的id。</p>
+<p class="define_head_2" id="sample2">2. 复制到新的数据库中</p>
+<pre class="code_sample">
+ void wblockSample()
+{
+	// step1: choose dwg to wblock
+	resbuf* rb = zcutNewRb(RTSTR);
+	if (RTNORM != zcedGetFileD(_T("Choose the dwg file"), NULL, _T("dwg"), 0, rb))
+	{
+		return;
+	}
+	ZTCHAR result[MAX_PATH];
+	if (RTNORM == zcedFindFile(rb-&gt;resval.rstring, result))
+	{
+		ZcDbDatabase* pDb = new ZcDbDatabase(false, true); // should use null database, or wblock returns ePermanentlyErased
+		Zcad::ErrorStatus es = pDb-&gt;readDwgFile(result);
+
+		// step2: Get the entity set in model space
+		ZcDbObjectIdArray ids;
+		getMsEnts(pDb, ids);
+
+		// step3: wblock to the target db
+		ZcDbDatabase* pDestDb = NULL;
+		es = pDb-&gt;wblock(pDestDb, ids, ZcGePoint3d::kOrigin);
+		if (es == Zcad::eOk)
+		{
+			zcutPrintf(_T("\n%d entities are imported."), ids.length());
+		}
+		else
+		{
+			delete pDb;
+			delete pDestDb;
+			zcutRelRb(rb);
+			zcutPrintf(_T("\nError: %s"), zcadErrorStatusText(es));
+			return;
+		}
+
+		// step4: save the target db as dwg file
+		CString strToDwgFilePath;
+		TCHAR szDocPath[MAX_PATH] = { 0 };
+		SHGetFolderPath(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, szDocPath);
+		strToDwgFilePath.Format(_T("%s\\TestWblock.dwg"), szDocPath);  // C:\Users\...\Documents\TestWblock.dwg
+
+		es = pDestDb-&gt;saveAs(strToDwgFilePath);
+		if (es != Zcad::eOk)
+		{
+			zcutPrintf(_T("\nSave faild, error: %s"), zcadErrorStatusText(es));
+		}
+		else
+		{
+			zcutPrintf(_T("\nThe new dwg path: %s"), strToDwgFilePath.GetString());
+		}
+
+		delete pDb;
+		delete pDestDb;
+	}
+	zcutRelRb(rb);
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">让用户选择一个DWG文件，把该文件中模型空间的所有实体复制到新的DWG文件中</p>
+<p class="define_head_2" id="sample3">3. 在两个数据库之间进行复制</p>
+<pre class="code_sample">
+   void wblockCloneObjectsSample()
+{
+	ZcDbBlockTable* pTbl = NULL;
+	zcdbCurDwg()-&gt;getBlockTable(pTbl, ZcDb::kForRead);
+	if (pTbl)
+	{
+		ZcDbObjectId msId;
+		pTbl-&gt;getAt(ZCDB_MODEL_SPACE, msId);
+		pTbl-&gt;close();
+
+		resbuf* rb = zcutNewRb(RTSTR);
+		if (RTNORM != zcedGetFileD(_T("Choose the dwg file"), NULL, _T("dwg"), 0, rb))
+		{
+			return;
+		}
+		ZTCHAR result[MAX_PATH];
+		if (RTNORM == zcedFindFile(rb-&gt;resval.rstring, result))
+		{
+			ZcDbDatabase* pDb = new ZcDbDatabase();
+			pDb-&gt;readDwgFile(result);
+
+			// Get entity set in model space
+			ZcDbObjectIdArray ids;
+			getMsEnts(pDb, ids);
+
+			// wblockCloneObjects to current db
+			ZcDbIdMapping idMap;
+			Zcad::ErrorStatus es = zcdbCurDwg()-&gt;wblockCloneObjects(ids, msId, idMap, ZcDb::kDrcReplace);
+			if (es == Zcad::eOk)
+			{
+				zcutPrintf(_T("\n%d entities are imported."), ids.length());
+			}
+			else
+			{
+				zcutPrintf(_T("\nError: %s"), zcadErrorStatusText(es));
+			}
+
+			delete pDb;
+			pDb = NULL;
+		}
+		zcutRelRb(rb);
+	}
+
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">让用户选择一个DWG文件，把该文件中模型空间的所有实体复制到当前的活动文档中。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

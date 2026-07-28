@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ZWCAD COM组件简介</title>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312"/>
+<link type="text/css" href="../styles/style.css" rel="stylesheet" />
+<link type="text/css" href="../styles/zwcadcss.css" rel="StyleSheet" />
+
+
+</head>
+<body>
+<div id="main" class="main">
+<div id="header" class="header">
+<div class="header_resize">
+<div class="banner">
+	<div class="banner_img_right"><img src="../images/banner_img_right.png"></div>
+	<div class="hear_text">中望CAD 2026 .NET二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+    <div class="Tophead"><span class="Tophead_text">ZWCAD COM组件简介</span></div> 
+<div class="clr"></div>
+<div id="content" class="content">
+    <div class="content_resize">
+    <div class="article">
+    <div class="clr"></div>
+
+
+<p class="define_head_1">说明</p>
+<p class="dev_body_text">在ZWCAD中，COM技术被广泛应用于各种插件和应用程序中，用于扩展和定制ZWCAD的功能。而ZWCAD提供的COM接口则是使用COM技术的关键，它提供了一组接口和方法，用于访问ZWCAD的对象模型和控制ZWCAD的各种功能和工具。</p>
+<hr algin="left" >
+<p class="define_head_1">COM接口的基本概念：</p>
+<p class="define_text_1">COM（Component Object Model，组件对象模型）是一种面向对象的组件技术，旨在将软件系统中的各个组件抽象为一组标准化的接口和方法，从而实现不同软件系统和编程语言之间的交互与通信。COM接口是COM技术的核心，它定义了组件之间的标准化交互方式，使得不同组件能够无缝地调用和协作。
+在ZWCAD中，COM接口同样扮演着重要角色。它通过一组标准化的接口和方法，提供了对ZWCAD对象模型的访问能力，并支持对ZWCAD各种功能和工具的控制。ZWCAD提供了丰富的COM接口，涵盖了应用程序、绘图文档、图层、块、实体、文本、尺寸等多种元素和功能，使开发者能够灵活地操作和扩展ZWCAD的功能。
+每个COM接口都有一个唯一的标识符，称为GUID（全局唯一标识符，Globally Unique Identifier）。GUID是一个128位的数字，用于唯一标识一个COM接口或组件。在ZWCAD中，每个COM接口都分配了一个GUID，以确保其在整个系统中的唯一性和可识别性。通过GUID，开发者可以准确地引用和调用特定的COM接口，从而实现与ZWCAD的高效交互。
+总结来说，COM技术通过标准化的接口和方法，为ZWCAD提供了强大的扩展能力和跨语言支持，而GUID则确保了接口的唯一性和可访问性，为开发者提供了稳定且灵活的编程环境。</p>
+<p class="define_head_1">COM接口的分类 ：</p>
+<p class="define_text_1">
+在ZWCAD中，COM接口可以根据其功能和用途进行分类。下面是ZWCAD中常用的COM接口分类：</p>
+<p class="define_text_1">1.ZcadApplication接口：用于控制ZWCAD的应用程序，例如启动、关闭、保存、打印、退出等。</p>
+<p class="define_text_1">2.ZcadDocument接口：用于访问ZWCAD的绘图文档，例如创建、打开、保存、关闭、刷新等。</p>
+<p class="define_text_1">3.ZcadDatabase接口：用于访问ZWCAD的数据库，例如访问图层、块、实体等。</p>
+<p class="define_text_1">4.ZcadBlock接口：用于访问ZWCAD的块，例如创建、插入、删除、复制等。</p>
+<p class="define_text_1">5.ZcadEntity接口：用于访问ZWCAD的实体对象，例如创建、插入、删除、编辑等。</p>
+<p class="define_text_1">6.ZcadText接口：用于访问ZWCAD的文本对象，例如创建、插入、编辑、格式化等。</p>
+<p class="define_text_1">7.ZcadDimension接口：用于访问ZWCAD的尺寸对象，例如创建、插入、编辑、格式化等。</p>
+<p class="define_text_1">8.ZcadLayer接口：用于访问ZWCAD的图层对象，例如创建、设置、显示、隐藏等。</p>
+<p class="define_text_1">9.ZcadSelectionSet接口：用于访问ZWCAD的选择集，例如创建、添加、删除、编辑等。</p>
+<p class="define_text_1">10.ZcadPlot接口：用于访问ZWCAD的打印和输出设置，例如设置打印区域、输出设备、文件格式等。</p>
+<p class="define_text_1">以上是ZWCAD中常用的COM接口分类，每个接口都有一组标准化的方法和属性，用于访问和控制相应的功能和对象。</p>
+
+<p class="define_head_1">使用COM接口的方法：</p>
+<p class="define_head_2">添加必要的头文件：</p>
+<pre class="code_sample">
+<xmp>#include <atlcomcli.h></xmp>
+#import "C:\\Program Files\\Common Files\\ZWSoft Shared\\zwcad25.tlb" no_namespace named_guids
+</pre>
+<p class="define_head_2">创建ZWCAD应用程序对象：</p>
+<p class="define_text_2">使用COM技术来访问ZWCAD的对象模型，首先需要获取到当前正在运行的ZWCAD进程或创建一个新的ZcadApplication实例，例如：</p>
+<pre class="code_sample">
+    HRESULT hr;
+    hr = CoInitialize(NULL);
+    CLSID clsid;
+    hr = CLSIDFromString(OLESTR("ZWCAD.Application.2026"), &clsid);
+    IZcadApplicationPtr pZcad;
+
+    IUnknownPtr pUnk;
+    hr = GetActiveObject(clsid, NULL, &pUnk);
+    if (hr == S_OK) {
+        // 获取当前活动的ZWCAD进程
+        pUnk.QueryInterface(IID_IZcadApplication, &pZcad);
+    }
+    else {
+        // 创建新ZWCAD进程
+        hr = pZcad.CreateInstance(clsid);
+        if (hr != S_OK) {
+            std::cout << "创建ZWCAD进程失败" << std::endl;
+        }
+    }
+</pre>
+<p class="define_text_2">如果需要显示或者隐藏ZWCAD界面可以通过Visible设置：</p>
+<pre class="code_sample">
+    pZcad->PutVisible(VARIANT_TRUE);
+</pre>
+<p class="define_text_2">另外ZcadApplication中也有不少常见实用的函数如，LoadZrx/UnloadZrx加载和卸载ZRX程序，ZoomAll/ZoomExtents/ZoomCenterd等函数来缩放视口，通过属性ActiveDocument来获取当前激活文档，Documents获取所有打开文档集合，MenuGroups获取菜单组对象，MenuBar获取当前菜单。</p>
+
+<p class="define_head_2">打开或创建绘图文档对象：</p>
+<p class="define_text_2">打开或创建ZWCAD的绘图文档对象，即ZcadDocument对象。可以使用ZcadApplication对象的Documents属性来访问ZcadDocument对象，例如：</p>
+<pre class="code_sample">
+    IZcadDocumentPtr pDoc = pZcad->GetDocuments()->Open(dwgFilePath);
+    IZcadUtilityPtr pUtil = pDoc->GetUtility();
+    pUtil->Prompt(L"外部程序调用COM接口测试\n");
+</pre>
+<p class="define_text_2">另外ZcadDocument中也有不少常见实用的函数如，SendCommand/PostCommand给中望cad平台发送命令；New/Open/Save/Close来新建打开保存关闭文档，通过属性ModelSpace/PaperSpace来获取模型空间，布局空间对象，Utility属性来获取ZcadUtility类库获取一些便捷的函数。 </p>
+<p class="define_head_2">访问和控制ZWCAD对象：</p>
+<p class="define_text_2">使用ZcadDocument对象的方法和属性，可以访问和控制ZWCAD的各种对象和功能。例如，可以使用ZcadDocument对象的Layers属性来访问和设置ZWCAD的图层，通过获取ModelSpace往模型空间添加实体例如：</p>
+<pre class="code_sample">
+    IZcadLayerPtr layer = pDoc->GetLayers()->Add(L"测试图层");
+
+    IZcadModelSpacePtr mspace = pDoc->GetModelSpace();
+    double pts[3];
+    pts[0] = 100;
+    pts[1] = 100;
+    pts[2] = 0;
+    
+    // 将double数组转换为VARIANT对象
+    SAFEARRAYBOUND bound[1];
+    bound[0].cElements = 3;
+    bound[0].lLbound = 0;
+    VARIANT pt;
+    VariantInit(&pt);
+    pt.vt = VT_ARRAY | VT_R8;
+    pt.parray = SafeArrayCreate(VT_R8, 1, bound);
+    pt.parray->pvData = pts;
+    
+    mspace->AddCircle(pt, 10);
+    pZcad->ZoomExtents();
+</pre>
+<p class="define_head_2">关闭文档和退出ZWCAD应用程序：</p>
+<p class="define_text_2">完成操作后，需要关闭和退出ZWCAD应用程序。可以使用ZcadApplication对象的Quit方法来退出ZWCAD应用程序，例如：</p>
+<pre class="code_sample">
+    pDoc->Save();
+    pDoc->Close();
+    pZcad->Quit();
+</pre>
+
+<hr>
+<p class="define_head_1">总结：</p>
+<p class="define_text_1">通过C++调用ZWCAD COM组件可以便利的复用COM组件包含的一些独立功能模块， 并且支持自动化，便于通过脚本或者其他进程控制中望CAD自动化的做一些应用。</p>
+<p class="define_text_1">在一些自动化场景非常试用。下一章我们将以一个典型示例的形式介绍一个COM组件驱动ZWCAD自动化完成一个功能的示例。</p>
+<p class="define_text_1">以下为完整代码：</p>    
+<pre class="code_sample">
+#include <iostream>
+#include <atlcomcli.h>
+#import "C:\\Program Files\\Common Files\\ZWSoft Shared\\zwcad25.tlb" no_namespace named_guids
+
+int main()
+{
+    HRESULT hr;
+    hr = CoInitialize(NULL);
+    CLSID clsid;
+    hr = CLSIDFromString(OLESTR("ZWCAD.Application.2026"), &clsid);
+    IZcadApplicationPtr pZcad;
+    
+    IUnknownPtr pUnk;
+    hr = GetActiveObject(clsid, NULL, &pUnk);
+    if (hr == S_OK) {
+    pUnk.QueryInterface(IID_IZcadApplication, &pZcad);
+    }
+    else {
+    hr = pZcad.CreateInstance(clsid);
+    if (hr != S_OK) {
+    std::cout << "创建ZWCAD进程失败" << std::endl; } } pZcad->PutVisible(VARIANT_TRUE);
+    
+    IZcadDocumentPtr pDoc = pZcad->GetActiveDocument();
+    IZcadUtilityPtr pUtil = pDoc->GetUtility();
+    pUtil->Prompt(L"外部程序调用COM接口测试\n");
+
+    IZcadLayerPtr layer = pDoc->GetLayers()->Add(L"测试图层");
+
+    double pts[3];
+    pts[0] = 100;
+    pts[1] = 100;
+    pts[2] = 0;
+
+    IZcadModelSpacePtr mspace = pDoc->GetModelSpace();
+
+    SAFEARRAYBOUND bound[1];
+    bound[0].cElements = 3;
+    bound[0].lLbound = 0;
+    VARIANT vtPt;
+    VariantInit(&vtPt);
+    vtPt.vt = VT_ARRAY | VT_R8;
+    vtPt.parray = SafeArrayCreate(VT_R8, 1, bound);
+    vtPt.parray->pvData = pts;
+
+    mspace->AddCircle(vtPt, 10);
+    pZcad->ZoomExtents();
+
+    pDoc->Save();
+    pDoc->Close();
+    pZcad->Quit();
+
+    CoUninitialize();
+}
+</pre>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div id="fbg" class="fbg">
+<div class="footer">
+<span class="lr">&copy; 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div> 
+</body>
+</html>

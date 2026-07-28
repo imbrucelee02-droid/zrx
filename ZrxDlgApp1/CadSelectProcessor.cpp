@@ -3,7 +3,9 @@
 #include "Common.h"
 #include "AgentTableSum.h"
 #include <aced.h>
+#include <zaced.h>
 #include <adslib.h>
+#include "rxmfcapi.h"
 #include <dbents.h>
 #include <zdbapserv.h>
 #include <acdocman.h>
@@ -27,7 +29,15 @@ namespace NS_CadSelect
         result.success = false;
 
         bool isBomMode = (pTask->convertMode == 1);
-        acutPrintf(L"\n[AI Convert] Triggering native CAD command (%s)...", isBomMode ? L"AI_BOM_Convert" : L"AI_TABLE_RECOGNIZE");
+        acutPrintf(L"\n[AI Convert] Triggering native CAD command (%s)...", isBomMode ? L"AI_BOM_Convert" : L"AI_TABLE_CONVERT");
+
+        // Bring ZWCAD viewport window to foreground so user can pick window interactively
+        HWND hWndAcad = acedGetAcadFrame()->m_hWnd;
+        if (hWndAcad)
+        {
+            ::SetForegroundWindow(hWndAcad);
+            ::SetFocus(hWndAcad);
+        }
 
         // 1. Directly execute native CAD command (handles viewport selection, OCR & Dify workflow natively)
         if (isBomMode)

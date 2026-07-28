@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>dll文件自动加载</title>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312"/>
+<link type="text/css" href="../styles/style.css" rel="stylesheet" />
+<link type="text/css" href="../styles/zwcadcss.css" rel="StyleSheet" />
+
+
+</head>
+<body>
+<div id="main" class="main">
+<div id="header" class="header">
+<div class="header_resize">
+<div class="banner">
+	<div class="banner_img_right"><img src="../images/banner_img_right.png"></div>
+	<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+    <div class="Tophead"><span class="Tophead_text">zrx文件自动加载</span></div> 
+<div class="clr"></div>
+<div id="content" class="content">
+    <div class="content_resize">
+    <div class="article">
+    <div class="clr"></div>
+
+
+<p class="define_head_1">说明</p>
+<p class="dev_body_text">在完成一个zrx插件的开发后手动的做法是appload命令加载该插件，当作为一个产品发布的时候就不能让客户每次手动执行命令加载，我们需要寻求一个自动加载zrx
+的方式，以便于能打开ZWCAD自动挂接该插件，启用里面的功能，或者是可以通过自动加载的原理制作成一个专业的产品exe安装包。</p>
+<hr algin="left" >
+<p class="define_head_1">注册表加载</p>
+<p class="define_text_1">注册表加载加载可以实现二次开发程序的自动加载，也可以通过第三方的安装包制作软件脚本修改注册表。其实现方法为在注册表中特定项下注册需要按需加载的二次开发程序。相关的注册表项为：</p>
+<pre class="code_sample">HKEY_LOCAL_MACHINE\SOFTWARE\ZWSOFT\ZWCAD\2026\zh-CN\Applications
+HKEY_CURRENT_USER\Software\ZWSOFT\ZWCAD\2026\zh-CN\Applications</pre>
+<p class="define_text_1">这两个注册表项的区别是 HKEY_LOCAL_MACHINE 下注册的对所有用户有效、HKEY_CURRENT_USER 下仅对当前用户有效。</p>
+<p class="define_text_1">可以将注册信息写入一个 reg 文件，导入注册表，即可实现按需加载。如下面的 reg 文件，实现了 ZWTest.zrx 程序的按需加载。</p>
+<pre class="code_sample"><i>Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\ZWSOFT\ZWCAD\2026\zh-CN\Applications\ZWTest]
+"LOADER"="ZWTest.zrx"
+"LOADCTRLS"=dword:00000002
+"DESCRIPTION"=""
+[HKEY_LOCAL_MACHINE\SOFTWARE\ZWSOFT\ZWCAD\2026\zh-CN\Applications\ZWTest\Commands]
+"ZWTest"="ZWTest"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\ZWSOFT\ZWCAD\2026\zh-CN\Applications\ZWTest\Groups]
+"ZRX_ZWTest_COMMANDS"="ZRX_ZWTest_COMMANDS"
+</i>
+</pre>
+<p class="define_text_1">该程序注册了命令：<i>ZWTest</i>，命令组为：<i>ZRX_ZWTest_COMMANDS</i>，加载方式为 00000002，在中望CAD 2026 启动时加载,如果需要设置按需加载既当执行到注册的命令时才自动加载，可以修改加载方式为 00000008。</p>
+<ul class="command_ul">
+<li><p><b>LOADER</b> 为要加载的程序文件，可以带路径，也可以不带路径，不带路径则按照文件搜索顺序查找文件。</p></li>
+<li><p><b>LOADCTRLS</b> 为加载方式。</p></li>
+<li><p><b>DESCRIPTION</b> 为对程序的描述文字。</p></li>
+<li><p><b>Commands</b> 下为该程序注册的命令。</p></li>
+<li><p><b>Groups</b> 下为该程序注册的命令组名称。</p></li>
+
+</ul>
+<p class="define_head_1">说明</p>
+<p class="define_text_1">上述的注册表路径中“zh-CN”代表中文版本，如英文版本为“en-US”等。机械版注册表路径则为：HKEY_LOCAL_MACHINE\SOFTWARE\ZWSOFT\ZWCADM\2026：</p>
+<hr algin="left" >
+<p class="define_head_1">ZWCAD.rx 自动加载</p>
+<p class="define_text_1">此文件专门负责中望CAD 启动时自动加载 ZRX 程序。例如，要自动加载 ZWTest.zrx 和 work.zrx，可以添加如下内容：</p>
+<pre class="code_sample">
+ZWTest.zrx
+work.zrx</pre>
+
+<hr algin="left" >
+<p class="define_head_1">ZWCAD2026.lsp 自动加载</p>
+
+<p class="define_text_1">此文件会在中望CAD 2026 启动时自动加载并执行其中的 LISP 代码，因此可以向此文件中添加 LISP 代码，将要自动加载的二次开发程序文件加载。例如，要自动加载ZWTest.zrx，可以添加如下代码：</p>
+<pre class="code_sample">(zrxload "ZWTest.zrx")</pre>
+<p class="define_head_2">说明</p>
+<ul class="command_ul">
+<li><p>ZWCAD2026.lsp 默认位置为安装包路径，如果是机械版本则为ZWCADM2026.lsp:</p>
+  <p class="prompt">平台版本：C:\Program Files\ZWSOFT\ZWCAD 2026\Support</p>
+    <p class="prompt">机械版本：C:\Program Files\ZWSOFT\ZWCAD Mechanical 2026 Chs\Support</p>
+  </li>
+<li><p>加载的文件既可以带完整路径，也可以只提供文件名。只有文件名的时候，中望CAD 2026 按照如下顺序搜索该文件：首先是当前工作目录，然后是选项中的支持文件搜索路径，最后是 ZWCAD.EXE 所在目录。中望CAD 2026 中关于文件不带路径，基本上都是按照这个搜索顺序查找文件。</p>
+</li> 
+</ul>
+    </div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div id="fbg" class="fbg">
+<div class="footer">
+<span class="lr">&copy; 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div> 
+</body>
+</html>

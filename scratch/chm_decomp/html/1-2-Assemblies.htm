@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ZRXSDK简介</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">ZRXSDK简介</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">ZWSDK获取与安装</p>
+<p class="define_text_1">想要获取ZWSDK开发包，可以到ZWCAD官网下载开发包：<a href="https://www.zwsoft.cn/support/zwcad-devdoc" rel="noopener noreferrer" target="_blank">中望官网</a>下载到相应版本的SDK安装包后双击安装包进行安装(有些电脑环境较为复杂可能安装失败，建议用管理员权限安装)。</p>
+<p class="define_text_1">以下是安装SDK后目录介绍：</p>
+<p class="define_text_1">arxport:模拟了ARXSDK的文件结构，便于开发者从ZRX移植到ZRX，有经验的开发者完全可以按照ZRX的开发习惯进行工程配置。</p>
+<p class="define_text_1">classmap:包含一个DWG图形，其中显示了ZRX类层次的结构。</p>
+<p class="define_text_1">Doc:包含所有帮助文件。</p>
+<p class="define_text_1">inc:包含ZRX的头文件。</p>
+<p class="define_text_1">lib-x64:包含ZRX所有的库文件。</p>
+<p class="define_text_1">samples:包含了许多ZRX和NET应用程序的例子。</p>
+<p class="define_text_1">Tools:包含向导程序，安装sdk时默认安装，如果没向导有安装成功可以手动安装。</p>
+<p class="define_text_1">utils:包含扩展对象的应用程序，例如用于表示的Brep程序。</p>
+<p class="figure"><img class="pics" src="../pics/1-2-SDKPath.png"/></p>
+<hr algin="left"/>
+<p class="define_head_1">ZRX核心类库</p>
+<p class="define_text_1">ZcRx:实现应用程序绑定、运行时类注册与识别的类。</p>
+<p class="define_text_1">ZcEd:用于注册原生ZWCAD命令及响应ZWCAD事件通知的类。</p>
+<p class="define_text_1">ZcDb:ZWCAD数据库操作类。</p>
+<p class="define_text_1">ZcGi:实现ZWCAD实体图形渲染的绘图类。</p>
+<p class="define_text_1">ZcGe:包含线性代数和几何对象操作的通用工具类。</p>
+<p class="define_text_1">完整类层次结构图请参见ZRX安装目录classmap子文件夹中的classmap.dwg文件。</p>
+<p class="figure"><img class="pics" src="../pics/1-2-ClassMap.png"/></p>
+<hr algin="left"/>
+<p class="define_head_1">ZRXSDK其他介绍</p>
+<p class="define_text_1">1.安装ZWSDK后会在VS2017中安装一个向导，用于创建ZRX工程和NET工程。(注：如果VS版本不是2017，向导将安装失败)</p>
+<p class="figure"><img class="pics" src="../pics/1-2-ZRXWiz.png"/></p>
+<p class="define_text_1">2.安装ZWSDK后会%localappdata%\Microsoft\MSBuild\v4.0下放置相应的.props属性配置文件。</p>
+<p class="figure"><img class="pics" src="../pics/1-2-Props.png"/></p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

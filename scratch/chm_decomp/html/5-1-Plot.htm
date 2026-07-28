@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>打印出图</title>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312"/>
+<link type="text/css" href="../styles/style.css" rel="stylesheet" />
+<link type="text/css" href="../styles/zwcadcss.css" rel="StyleSheet" />
+
+
+</head>
+<body>
+<div id="main" class="main">
+<div id="header" class="header">
+<div class="header_resize">
+<div class="banner">
+	<div class="banner_img_right"><img src="../images/banner_img_right.png"></div>
+	<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+    <div class="Tophead"><span class="Tophead_text">打印出图</span></div> 
+<div class="clr"></div>
+<div id="content" class="content">
+    <div class="content_resize">
+    <div class="article">
+    <div class="clr"></div>
+
+
+<p class="define_head_1">说明</p>
+<p class="dev_body_text">在ZWCAD应用中设计师绘制的CAD图纸经常会有出图打印的需求，使用plot命令来打印出图效率会比较低，ZWCAD对于打印功能同样的有丰富的接口调用，来完成一些打印功能，配置一些可定制的配置从而增加出图效率。本章节主要介绍一个完整的打印示例，来介绍打印接口的使用。</p>
+<hr algin="left" >
+<p class="define_head_1">关键类介绍：</p>
+<p class="define_text_1">在进行正式的打印工作前，你必须为布局指定各种与打印有关的设置，如打印设备、图纸尺寸、打印比例、打印区域等。在ZWCAD中，这些设置被称为页面设置。本节实例将模拟ZWCAD的“页面设置对话框”来完成打印的设置工作。</p>
+<p class="define_head_1">ZcDbPlotSettings 类：</p>
+<p class="define_text_1">
+在ZRX中，打印设置是由 ZcDbPlotSettings 类表示的。布局类ZcDbLayout，其实是由 ZcDbPlotSetings 类派生的。ZcDbLayout 与 ZcDbPlotSetings 对象的不同之处在于，Layout 对象与包含需要打印的几何图形的 ZcDbBlockTableReocrd 对象关联，而 ZcDbPlotSettings 对并不关联特定的 ZcDbBlockTableReocrd 对象，它只是一个可供任意图形使用的打印设置的集合。</p>
+
+<p class="define_text_1">ZcDbPlotSettings 对象的常用属性如表：</p>
+
+
+<table class="table-desc">
+    <TR>
+    <TH>枚举值</TH>
+    <TH>类型</TH>
+	<TH>打印设置选项</TH>
+    </TR>
+    <TR>
+        <td class="table-item-odd">CanonicalMediaName</td>
+        <td class="table-item-odd">string</td>
+        <td class="table-item-odd">标准图纸尺寸</td>
+
+    </TR>
+    <TR>
+        <td class="table-item-odd">CurrentStyleSheet</td>
+        <td class="table-item-odd">string</td>
+        <td class="table-item-odd">打印样式表</td>
+
+    </TR>
+        <TR>
+        <td class="table-item-odd">CustomPrintScale</td>
+        <td class="table-item-odd">CustomSeale</td>
+        <td class="table-item-odd">自定义打印比例(UseStandardScale属性须为false才起作用)</td>
+
+          <TR>
+        <td class="table-item-odd">ModelType</td>
+        <td class="table-item-odd">bool</td>
+        <td class="table-item-odd">是否为模型空间</td>
+
+    </TR>
+        <TR>
+        <td class="table-item-odd">PlotCentered</td>
+        <td class="table-item-odd">bool</td>
+        <td class="table-item-odd">是否居中打印</td>
+
+    </TR>
+        <TR>
+        <td class="table-item-odd">PlotCfgName</td>
+        <td class="table-item-odd">string</td>
+        <td class="table-item-odd">打印设备名</td>
+
+          <TR>
+        <td class="table-item-odd">PlotOrigin</td>
+        <td class="table-item-odd">Point2d</td>
+        <td class="table-item-odd">打印原点(原点是从图纸边界的介质边缘偏移而来的)</td>
+
+    </TR>
+              <TR>
+        <td class="table-item-odd">PlotPaperUnits</td>
+        <td class="table-item-odd">PlotPaperUnits</td>
+        <td class="table-item-odd">打印单位(Inches=英寸、Millimeters=毫米、Pixels=像素)</td>
+
+    </TR>
+              <TR>
+        <td class="table-item-odd">PlotRotation</td>
+        <td class="table-item-odd">PlotRotation</td>
+        <td class="table-item-odd">图形方向(Degrees000表示纵向、Degrees090表示横向、Degrees180表示纵向并反向、Degrees270表示横向并反向)</td>
+
+    </TR>
+              <TR>
+        <td class="table-item-odd">PlotType</td>
+        <td class="table-item-odd">PlotType</td>
+        <td class="table-item-odd">打印类型(Display表示打印当前模型空间中显示的所有内容，从图纸空间布局打印时，此选项不可用:Extents表示打印当前选定空间边界内的所有内容:Limits表示打印当前空间限定范围内的所有内容;View 表示打印命名的视图:Window表示打印PlotWindowArea属性指定的窗口中的所有内容:Layout表示打印指定图纸尺寸边界内的所有内容，从模型空间打印时，此选项不可用)</td>
+
+    </TR>
+              <TR>
+        <td class="table-item-odd">PlotWindowArea</td>
+        <td class="table-item-odd">Extents2d</td>
+        <td class="table-item-odd">要打印的窗口区域</td>
+
+    </TR>
+                  <TR>
+        <td class="table-item-odd">StdScaleType</td>
+        <td class="table-item-odd">StdScaleType</td>
+        <td class="table-item-odd">标准比例类型(UseStandardScale属性需为true才起作用)</td>
+
+    </TR>
+                  <TR>
+        <td class="table-item-odd">UseStandardScale</td>
+        <td class="table-item-odd">bool</td>
+        <td class="table-item-odd">打印是否选用标准比例</td>
+
+    </TR>
+
+</TABLE>
+
+<p class="define_text_1">由于表中的 ZcDbPlotSettings 类属性为只读属性，因此你不能直接通过这些属性进行打印设置。要进行打印设置，你必须通过打印设置验证类 ZcDbPlotSetingsValidator 的有关函数进行打印设置。有关的设置函数其名称以Set开头，后面跟与表一样的属性名，该类函数的第一个参数为需要进行设置的 ZcDbPlotSettings 对象，第二个参数为需要设置的值，如设置图纸尺寸的函数定义为:</p>
+<pre class="code_sample">
+virtual Zcad::ErrorStatus setCanonicalMediaName(ZcDbPlotSettings* pPlotSet, const ZTCHAR * mediaName) = 0;
+</pre>
+
+<p class="define_head_1">注意事项：</p>
+<p class="define_text_1">1.SetPlotCfgName设置的PlotConfigurationName打印设备AutoCad的文件名为****.pc3,而ZWCAD有自己的格式为****.pc5。</p>
+<p class="define_text_1">2.beginDocument函数中的bool bPlotToFile 参数控制是否打印成实体文件。如果bool bPlotToFile = true，代表打印成电脑文件如PDF，相应的pc5文件应该设置成相应的dwg to pdf.pc5。如果bool bPlotToFile = false，代表打印成实体文件，相应的pc5文件需要选择实体打印机配置的pc5。</p>
+<p class="define_text_1"></p>
+<p class="define_text_1">3.ppd.IsVisible = true;控制打印进度对话框的显示，设置成false可以实现“后台打印”。</p>
+<p class="define_text_1">&nbsp;</p>
+<p class="define_text_1">下面是一个打印的完整示例：</p>
+
+<pre class="code_sample">
+/// 通过布局管理器获取当前布局Id
+/// activeLayoutBTRId: 活动Layout块表记录Id
+/// 返回值：当前布局Id
+ZcDbObjectId getLayoutId(const ZcDbObjectId activeLayoutBTRId)
+{
+	ZcDbBlockTableRecord* pBlkTblRec = NULL;
+	auto es = zcdbOpenObject(pBlkTblRec, activeLayoutBTRId);
+	if (es != Zcad::eOk)
+	{
+		zds_alert(L"获取当前布局块表记录失败");
+		zds_printf(L"\nerror code : %s\n", zcadErrorStatusText(es));
+		if (pBlkTblRec != NULL) pBlkTblRec->close();
+		return ZcDbObjectId::kNull;
+	}
+	auto pLayoutId = pBlkTblRec->getLayoutId();
+	pBlkTblRec->close();
+	return pLayoutId;
+}
+
+
+/// 设置打印配置
+/// pLayoutId：当前布局Id
+/// plotInfo：打印信息
+bool setPlotConfig(const ZcDbObjectId pLayoutId, ZcPlPlotInfo& plotInfo)
+{
+	ZcDbLayout* pLayout = NULL;
+	auto es = zcdbOpenObject(pLayout, pLayoutId);
+	if (es != Zcad::eOk)
+	{
+		zds_alert(L"获取布局对象失败");
+		zds_printf(L"\nerror code : %s\n", zcadErrorStatusText(es));
+		if (pLayout != NULL) pLayout->close();
+		return false;
+	}
+	ZcDbPlotSettings* pPlotSettings = new ZcDbPlotSettings(pLayout->modelType());
+	pPlotSettings->copyFrom(pLayout);
+	pLayout->close();
+
+	ZcDbPlotSettingsValidator* pPSV = NULL;
+	pPSV = zcdbHostApplicationServices()->plotSettingsValidator();
+
+	//更新打印设备列表，以获取当前能够使用的打印配置
+	pPSV->refreshLists(pPlotSettings);
+
+	/*
+	* 自定义打印机配置
+	* 如果是多个dwg打印到同一个pdf中，必须保证每次输出的设备都相同
+	*/
+	pPSV->setPlotCfgName(pPlotSettings, L"DWG to PDF.pc5");
+	pPSV->setCanonicalMediaName(pPlotSettings, L"ISO A4");
+	pPSV->setPlotType(pPlotSettings, ZcDbPlotSettings::kExtents);
+	pPSV->setCurrentStyleSheet(pPlotSettings, L"zwcad.ctb");
+	pPSV->setPlotCentered(pPlotSettings, true);
+	pPSV->setUseStandardScale(pPlotSettings, true);
+	pPSV->setStdScaleType(pPlotSettings, ZcDbPlotSettings::kScaleToFit);
+	pPSV->setPlotRotation(pPlotSettings, ZcDbPlotSettings::k90degrees);
+
+	plotInfo.setOverrideSettings(pPlotSettings);
+	pPlotSettings->close();
+	return true;
+}
+
+
+/// 打印入口函数
+/// pdfPath：输出pdf的路径
+void Sample_plot(const CString pdfPath)
+{
+	ZcPlPlotEngine* pEngine = NULL;
+	auto es = ZcPlPlotFactory::createPublishEngine(pEngine);
+	//auto es = ZcPlPlotFactory::createPreviewEngine(pEngine);
+	if (es != Zcad::eOk)
+	{
+		zds_alert(L"创建打印程序失败！");
+		zds_printf(L"\nerror status: %s\n", zcadErrorStatusText(es));
+		if (pEngine != NULL) pEngine->destroy();
+		return;
+	}
+
+	int docCounts = zcDocManager->documentCount();
+	/*
+	* 创建打印进程对话框
+	*/
+	ZcPlPlotProgressDialog* ppd = zcplCreatePlotProgressDialog(zcedGetZcadFrame()->m_hWnd, false, docCounts);
+	ppd->setPlotMsgString(ZcPlPlotProgressDialog::PlotMSGIndex::kDialogTitle, L"批量打印进程");
+	ppd->setPlotMsgString(
+		ZcPlPlotProgressDialog::PlotMSGIndex::kSheetSetProgressCaption,
+		L"当前图纸打印进程");
+	ppd->setPlotMsgString(
+		ZcPlPlotProgressDialog::PlotMSGIndex::kSheetProgressCaption,
+		L"打印图纸进程");
+	ppd->setPlotProgressRange(0, 100 * docCounts);
+	ppd->onBeginPlot();
+	ppd->setIsVisible(true);
+	
+	es = pEngine->beginPlot(ppd);
+	if (es != Zcad::eOk)
+	{
+		zds_alert(L"开始打印失败");
+		zds_printf(L"\nerror status: %s\n", zcadErrorStatusText(es));
+		if (pEngine != NULL) pEngine->destroy();
+		return;
+	}
+
+	ZcDbLayoutManager* pLayoutMgr = zcdbHostApplicationServices()->layoutManager();
+	ZcPlPlotInfo plotInfo;
+	ZcPlPlotPageInfo pageInfo;
+
+	auto doc_Iter = zcDocManager->newZcApDocumentIterator();
+	bool bHasDocument = false;
+	int index = 1;
+
+	while (!doc_Iter->done())
+	{
+		/*
+		* 切换当前激活文档以获取布局
+		*/
+		zcDocManager->activateDocument(doc_Iter->document());
+		ppd->setPlotMsgString(
+			ZcPlPlotProgressDialog::PlotMSGIndex::kSheetName,
+			doc_Iter->document()->fileName()
+		);
+
+		auto curLayoutId = getLayoutId(pLayoutMgr->getActiveLayoutBTRId());
+		if (curLayoutId == ZcDbObjectId::kNull)
+		{
+			return;
+		}
+		plotInfo.setLayout(curLayoutId);
+
+		/*
+		* 自定义当前图纸的打印配置
+		*/
+		if (!setPlotConfig(curLayoutId, plotInfo))
+		{
+			return;
+		}
+
+		/*
+		* 创建打印信息验证器
+		*/
+		ZcPlPlotInfoValidator pPIV;
+		pPIV.setMediaMatchingPolicy(ZcPlPlotInfoValidator::kMatchEnabled);
+		es = pPIV.validate(plotInfo);
+
+		/*
+		* 打印一份文档只需要执行一次beginDocument
+		*/
+		if (!bHasDocument)
+		{
+			es = pEngine->beginDocument(plotInfo, doc_Iter->document()->fileName(), NULL, 1, true, pdfPath);
+			bHasDocument = true;
+		}
+
+		doc_Iter->step();
+		ppd->onBeginSheet();
+		ppd->setSheetProgressRange(0, 100);
+		ppd->setSheetProgressPos(0);
+		/*
+		* 开始打印
+		*/
+		if (doc_Iter->done())
+		{
+			//如果是最后一张则设置bLastPage为true
+			es = pEngine->beginPage(pageInfo, plotInfo, true);
+		}
+		else
+		{
+			es = pEngine->beginPage(pageInfo, plotInfo, false);
+		}
+		es = pEngine->beginGenerateGraphics();
+		es = pEngine->endGenerateGraphics();
+		es = pEngine->endPage();
+		ppd->setSheetProgressPos(100);
+		ppd->onEndSheet();
+		ppd->setPlotProgressPos(index * 100);
+		++index;
+	}
+
+	/*
+	* 结束打印，销毁打印进程，避免影响其他打印进程执行
+	*/
+	es = pEngine->endDocument();
+	es = pEngine->endPlot();
+	pEngine->destroy();
+	ppd->destroy();
+
+	delete doc_Iter;
+	zds_printf(L"\n打印完成\n");
+}
+</pre>
+
+<hr algin="left" >
+<p class="define_head_1">运行效果：</p>
+<p class="define_text_1">在ZRX工程中创建一个命令，调用Sample_plot函数，传入打印pdf的路径，新建一张dwg图纸，在模型空间绘制任意一些实体，执行命令后在对应路径得到打印生成的pdf文件。</p>
+
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div id="fbg" class="fbg">
+<div class="footer">
+<span class="lr">&copy; 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div> 
+</body>
+</html>

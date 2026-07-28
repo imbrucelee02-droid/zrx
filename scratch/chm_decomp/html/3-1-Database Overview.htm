@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>DWG数据库概述</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">DWG数据库概述</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">DWG数据库结构概述</p>
+<p class="dev_body_text">DWG数据库是中望CAD图形文件的核心存储结构，其内部以层次化的方式组织数据。所有图形对象（如直线、圆、块引用等）、非图形对象（如图层、线型）以及词典均存储在此数据库中。数据库的主要组成部分包括：</p>
+<p class="define_text_1">符号表（Symbol Tables）：以表记录的形式存储特定类型的对象，如块表存储块、图层存储图层、线型表存储线型等。</p>
+<p class="define_text_1">命名词典（Named Object Dictionary）：用户自定义数据和某些DWG数据的根容器，所以某些情况下也叫根词典，可嵌套子词典。</p>
+<p class="dev_body_text">注意：DWG数据库是一个单线程的数据库，只支持单线程操作。</p>
+<hr algin="left"/>
+<p class="define_head_1">符号表的概念与分类</p>
+<p class="define_head_2">符号表的定义</p>
+<p class="define_text_2">符号表是中望CAD中用于管理特定类型对象的容器，每个符号表存储一组同类型的表记录（TableRecord）。符号表本身是数据库的内置结构，开发者无法直接创建或删除符号表。</p>
+<p class="define_head_2">常用符号表及功能</p>
+<p class="define_text_2">
+</p><table class="table-desc">
+<tr>
+<th>符号表类型</th>
+<th>存储内容</th>
+<th>典型操作</th>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbBlockTable</td>
+<td class="table-item-odd">块定义（ZcDbBlockTableRecord）</td>
+<td class="table-item-odd">获取模型空间、图纸空间的块表记录，创建、遍历块定义</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbLayerTable</td>
+<td class="table-item-odd">图层属性（颜色、线型等）</td>
+<td class="table-item-odd">控制图层可见性、冻结、锁定状态</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbLinetypeTable</td>
+<td class="table-item-odd">线型定义（如虚线、点划线）</td>
+<td class="table-item-odd">添加线型</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbTextStyleTable</td>
+<td class="table-item-odd">文字样式（字体、高度等）</td>
+<td class="table-item-odd">添加、修改自定义文字样式</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbDimStyleTable</td>
+<td class="table-item-odd">标注样式（箭头、公差等）</td>
+<td class="table-item-odd">添加、修改自定义标注样式</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbUcsTable</td>
+<td class="table-item-odd">坐标系</td>
+<td class="table-item-odd">添加、修改自定义坐标系</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbViewportTable</td>
+<td class="table-item-odd">视口</td>
+<td class="table-item-odd">添加、修改视口</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZcDbRegAppTable</td>
+<td class="table-item-odd">应用程序名</td>
+<td class="table-item-odd">添加、修改二次开发应用程序名</td>
+</tr>
+</table>
+<p class="define_head_2">常用词典及功能</p>
+<p class="define_text_2">
+</p><table class="table-desc">
+<tr>
+<th>词典名称</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">ZCAD_LAYOUT</td>
+<td class="table-item-odd">存储布局（Layout）信息</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCAD_GROUP</td>
+<td class="table-item-odd">存储编组信息</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZWCAD_SCALELIST</td>
+<td class="table-item-odd">存储比例信息</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCAD_TABLESTYLE</td>
+<td class="table-item-odd">存储表格样式信息</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCAD_MLEADERSTYLE</td>
+<td class="table-item-odd">存储多引线样式信息</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCAD_VISUALSTYLE</td>
+<td class="table-item-odd">存储视觉样式信息</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCAD_PLOTSETTINGS</td>
+<td class="table-item-odd">存储打印设置信息</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1">数据库操作（ZcDbDatabase）的详解</p>
+<p class="define_head_2">常用操作示例</p>
+<p class="define_head_3">获取当前打开的dwg数据库</p>
+<pre class="code_sample">
+ZcDbDatabase* pDb = zcdbHostApplicationServices()-&gt;workingDatabase();
+</pre>
+<p class="define_head_3">新建dwg数据库</p>
+<pre class="code_sample">
+	// 创建新的图形数据库，分配内存空间
+    ZcDbDatabase *pDb = new ZcDbDatabase(true, false);</pre>
+<p class="define_head_3">读取外部dwg数据库</p>
+<pre class="code_sample">
+	// 使用false作为构造函数的参数，创建一个空的图形数据库
+    // 这样保证图形数据库仅仅包含读入的内容    
+    ZcDbDatabase *pDb = new ZcDbDatabase(false);
+	CString filePath;
+	filePath = _T("D:\\test.dwg");
+    pDb-&gt;readDwgFile(filePath, _SH_DENYWR);
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">块表（ZcDbBlockTable）的详解</p>
+<p class="define_head_2">块表的结构</p>
+<p class="define_text_2">块表是DWG数据库中最重要的符号表之一，包含所有块定义（ZcDbBlockTableRecord）。每个块定义可以包含多个图形实体（ZcDbEntity），如直线、圆或嵌套块引用。</p>
+<p class="define_head_2">常用操作示例</p>
+<p class="define_head_3">1. 在模型空间创建实体</p>
+<pre class="code_sample">
+ZcDbObjectId PostToModelSpace( ZcDbEntity *pEnt, ZcDbDatabase *pDb )
+{
+	// 检查输入参数的有效性
+	assert (pEnt);		// 等效于assert (pEnt != NULL);
+	
+	// 获得当前图形数据库的块表
+	ZcDbBlockTable *pBlkTbl = NULL;
+	pDb-&gt;getBlockTable(pBlkTbl, ZcDb::kForRead);
+	
+	// 获得模型空间对应的块表记录
+	ZcDbBlockTableRecord *pBlkTblRcd = NULL;
+	pBlkTbl-&gt;getAt(ZCDB_MODEL_SPACE, pBlkTblRcd, ZcDb::kForWrite);
+	pBlkTbl-&gt;close();
+	
+	// 将实体添加到模型空间的块表记录
+	ZcDbObjectId entId;
+	Zcad::ErrorStatus es = pBlkTblRcd-&gt;appendZcDbEntity(entId, pEnt);
+	if (es != Zcad::eOk)
+	{
+		pBlkTblRcd-&gt;close();
+		delete pEnt;	// 添加失败时，要delete
+		pEnt = NULL;
+		
+		return ZcDbObjectId::kNull;
+	}
+	// 关闭模型空间块表记录和实体
+	pBlkTblRcd-&gt;close();
+	pEnt-&gt;close();
+	
+	return entId;
+}</pre>
+<p class="define_head_3">2. 创建块定义，并在模型空间创建块引用，引用该块定义</p>
+<pre class="code_sample">
+    void ZWInsertBlk()
+{
+	// 获得用户输入的块定义名称	
+	TCHAR blkName[40];
+	if (zcedGetString(ZSoft::kFalse, TEXT("\n输入图块的名称:"), blkName) != RTNORM)
+	{			
+		return;
+	}	
+	
+	// 获得当前数据库的块表
+	ZcDbBlockTable *pBlkTbl = NULL;
+	zcdbHostApplicationServices()-&gt;workingDatabase()
+		-&gt;getBlockTable(pBlkTbl, ZcDb::kForWrite);
+	
+	// 查找用户指定的块定义是否存在
+	CString strBlkDef;
+	strBlkDef.Format(TEXT("%s"), blkName);
+	if (!pBlkTbl-&gt;has(strBlkDef))
+	{
+		zcutPrintf(TEXT("\n当前图形中未包含指定名称的块定义!"));
+		pBlkTbl-&gt;close();
+		return;
+	}
+	
+	// 获得用户输入的块参照的插入点
+	zds_point pt;
+	if (zcedGetPoint(NULL, TEXT("\n输入块参照的插入点:"), pt) != RTNORM)
+	{	
+		pBlkTbl-&gt;close();
+		return;
+	}
+	ZcGePoint3d ptInsert = asPnt3d(pt);
+	
+	// 获得用户指定的块表记录	
+	ZcDbObjectId blkDefId;
+	pBlkTbl-&gt;getAt(strBlkDef, blkDefId);
+	pBlkTbl-&gt;close();
+	
+	// 创建块参照对象
+	ZcDbBlockReference *pBlkRef = new ZcDbBlockReference(ptInsert, blkDefId);
+	
+	// 将块参照添加到模型空间
+	PostToModelSpace(pBlkRef);	
+}
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">打开、关闭、删除对象</p>
+<p class="define_text_1">ZWCAD数据库主要操纵手段有打开和关闭对象、管理内存中的对象、对象隶属关系和使用扩展数据或对象的扩展词典的扩展对象。</p>
+<p class="define_head_2">打开和关闭对象</p>
+<p class="define_text_1">在对对象进行各种操作前，首先必须打开对象。关键点：</p>
+<p class="define_head_3">对象的句柄、ID和C++指针</p>
+<p class="define_text_3">1.对象的句柄随图形文件存储在磁盘上，一旦图形对象被创建后，句柄始终不会变化；</p>
+<p class="define_text_3">2.对象ID是当前图形文件被打开时，由ZWCAD分配给每个对象的，ID值在当前绘图进程中不会变化，但在每次打开时不能保持一致；</p>
+<p class="define_text_3">3.对象的C++指针是在ZRX程序中打开某一对象时，所返回指向对象的指针。</p>
+<p class="define_head_3">对象名称和ID的相互引用</p>
+<p class="define_text_2">ZcDbObjectId：对象的唯一标识符，仅在当前会话（如从文档打开到关闭的期间）中有效。</p>
+<p class="define_text_2">句柄（Handle）：对象的全局唯一标识符，跨会话持久化保存，即文档关闭后再打开，对象的句柄不会改变。</p>
+<p class="define_text_2">zds_name：其实是一个二维数组，数组元素类型为长整型，在与用户交互的函数中还会经常用到。</p>
+<p class="define_head_4">转换方法</p>
+<pre class="code_sample">
+    // 从对象的zdsname获取对象的ID
+    zcdbGetObjectId(ZcDbObjectId&amp; objId,const zds_name objName);
+    
+    //从对象的ID获取对象的zds_name
+    zcdbGetZdsName(zds_name&amp; objName,ZcDbObjectId objId);
+
+    // 由zcdbHandEnt函数对象句柄获得对象名称
+    zcdbHandEnt(const char* handle,zds_name objName);
+</pre>
+<p class="define_head_3">打开对象的几种方式</p>
+<pre class="code_sample">
+    // 从对象的ID获取对象的C++指针
+   	Zcad::ErrorStatus ZcDbDatabase::zcdbOpenObject
+	(ZcDbObject*&amp;obj,//返回对象的C++指针
+	ZcDbObjectId id,//对象ID 
+	ZcDb::Openlode mode,//打开模式
+	ZSoft::Boolean/要打开的对象是否已删除
+	openErasedobject=ZSoft::kFalse)
+    
+    //从对象的句柄获取对象的ID
+   	Zcad:ErrorStatus getZcDbObjectId
+	(ZcDbObjectId&amp; retId,//返回对象的0
+	ZSoft::Boolean createlfNotFound,//如果对象的句柄不存在，是否创建ID 
+	const xcDbiandle&amp; objlandle,//对象的句柄
+	ZSoft::UInt32 xRefid=0);//扩展用
+
+    // 从对象的C++指针获取对象的句柄
+    ZcDbObject*pObject;
+	ZcDbHandle handle;
+	pObject-&gt;getZcDbHandle(handle);
+</pre>
+<p class="define_head_3">对象打开模式的选择</p>
+<p class="define_head_4">可以选择三种打开模式:</p>
+<p class="define_text_3">kForRead 以只读方式打开</p>
+<p class="define_text_3">kForWrite 以写的方式打开。</p>
+<p class="define_text_3">kForNotify以接受通告的方式打开（很少使用）。</p>
+<p class="define_head_4">三种打开模式可以相互转换:</p>
+<p class="define_text_3">upgradeOpen()只读方式→写的方式。</p>
+<p class="define_text_3">downgradeOpen()写的方式→只读方式。</p>
+<p class="define_text_3">upgradeFromNotify()通知方式一写的方式。</p>
+<p class="define_head_2">删除对象</p>
+<p class="define_text_1">在不同的情形下删除一个对象需要采用不同的方法</p>
+<p class="define_head_3">1.创建的对象尚未加入图形数据库时，可采用ZcDbObject::delete();直接删除。</p>
+<p class="define_head_3">2.对图形数据库对象可以用:</p>
+<pre class="code_sample">
+Zcad::ErrorStatus erase(ZSoft::Boolean erasing = true);
+</pre>
+<p class="define_text_3">进行删除或恢复。在这里有两点需要注意:</p>
+<p class="define_text_3">1).对于一般数据库对象，如词典中的对象，一旦删除后，有关该对象的信息将丢失，对象恢复后，原有的信息已不存在；</p>
+<p class="define_text_3">2).对于实体对象，当用erase（kTrue）删除时，有关该实体的信息仍存在于块表记录中，用erase（kFalse）就可恢复</p>
+<p class="define_head_3">3.用zcdbOpenObject()可打开已删除的对象。</p>
+<p class="define_head_2">对象的隶属关系</p>
+<p class="define_text_1">1.9个符号表和1个命名对象词典的直接拥有者为图形数据库，换句话说也就是由ZWCAD图形数据库直接管理这10个对象。</p>
+<p class="define_text_1">2.块表记录拥有实体对象。</p>
+<p class="define_text_1">3.每个符号表拥有特定类型的符号表记录。</p>
+<p class="define_text_1">4.ZcDbDictionary词典对象可以拥有任何ZcDbObject对象。</p>
+<p class="define_text_1">5.ZcDbObject对象可以拥有扩展词典。</p>
+<p class="define_text_1">所有归档操作都是从根对象开始的，应用程序可以创进新对象并指定它们之间的隶属。</p>
+<hr algin="left"/>
+<p class="define_head_1">坐标系</p>
+<p class="define_text_1">ZWCAD采用的坐标系统有：</p>
+<p class="define_head_2">世界坐标系（WCS）：</p>
+<p class="define_text_2">所有其他坐标系的参照坐标系，其他坐标系都是相对于世界坐标系定义的，ZWCAD系统为用户提供了一个绝对的坐标系，即世界坐标系（WCS）。通常，ZWCAD构造新图形时将自动使用WCS。虽然WCS不可更改，但可以从任意角度、任意方向来观察或旋转。</p>
+<p class="define_head_2">用户坐标系（UCS）</p>
+<p class="define_text_2">相对于世界坐标系WCS，用户可根据需要创建无限多的坐标系，这些坐标系称为用户坐标系（UCS，User Coordinate System）。用户使用“ucs”命令来对UCS进行定义、保存、恢复和移动等一系列操作。</p>
+<p class="define_head_2">显示坐标系（DCS）</p>
+<p class="define_text_2">对象在屏幕上显示前必须被转换到DCS中，DCS的原点保存在ZWCAD系统变量TARGET 中。</p>
+<p class="define_head_2">实体坐标系（ECS）</p>
+<p class="define_text_2">函数zcdbEntGet（）返回的坐标点是用与实体自身相关的坐标系表示的，这些点必须被转换成其他坐标系点后才能使用；同样，其他坐标系点必须被转换成ECS点后才能通过函数zcdbEntMod（）或zcdbEntMake（）写入数据库。</p>
+<p class="define_head_2">图纸空间显示坐标系（PSDS）</p>
+<p class="define_text_2">主要进行二维转换，并且只与当前活动的模型空间视口的DCS相互转换。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>编辑器反应器</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">编辑器反应器</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="dev_body_text">
+    编辑器反应器中常用反应器有打开或关闭图纸、执行命令过程等。
+</p>
+<hr algin="left"/>
+<p class="define_head_1">常用编辑器反应器</p>
+<p class="define_text_1"></p>
+<table class="table-desc">
+<tr>
+<th>事件</th>
+<th>功能概述</th>
+</tr>
+<tr>
+<td class="table-item-odd">beginDwgOpen</td>
+<td class="table-item-odd">即将打开的文档</td>
+</tr>
+<tr>
+<td class="table-item-odd">commandWillStart</td>
+<td class="table-item-odd">即将执行的命令</td>
+</tr>
+<tr>
+<td class="table-item-odd">commandEnded</td>
+<td class="table-item-odd">命令执行完毕</td>
+</tr>
+<tr>
+<td class="table-item-odd">commandCancelled</td>
+<td class="table-item-odd">命令被取消</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1">定义反应器内容</p>
+<p class="define_text_1">
+    在工程中新建类，设置基类为ZcEditorReactor，在类中添加所需的事件虚函数。
+</p>
+<pre class="code_sample">
+//EdReactor.h
+class EdReactor : public ZcEditorReactor
+{
+public:
+    ZCRX_DECLARE_MEMBERS(EdReactor);
+
+    EdReactor();
+    virtual ~EdReactor();
+
+    virtual void commandWillStart(const ZTCHAR* cmdStr);
+    virtual void commandEnded(const ZTCHAR* cmdStr);
+    virtual void commandCancelled(const ZTCHAR* cmdStr);
+    virtual void beginDwgOpen(const ZTCHAR* filename);
+};
+
+// EdReactor.cpp
+ZCRX_NO_CONS_DEFINE_MEMBERS(EdReactor, ZcEditorReactor);
+
+EdReactor::EdReactor()
+{
+}
+
+EdReactor::~EdReactor()
+{
+}
+
+void EdReactor::commandWillStart(const ZTCHAR* cmdStr)
+{
+    zcutPrintf(_T("\n%s will start!"), cmdStr);
+}
+
+void EdReactor::commandEnded(const ZTCHAR* cmdStr)
+{
+    zcutPrintf(_T("\n%s ended!"), cmdStr);
+}
+
+void EdReactor::commandCancelled(const ZTCHAR* cmdStr)
+{
+    zcutPrintf(_T("\n%s cancelled!"), cmdStr);
+}
+
+void EdReactor::beginDwgOpen(const ZTCHAR* filename)
+{
+    zcutPrintf(_T("\n%s beginDwgOpen!"), filename);
+}
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">添加和删除编辑器反应器</p>
+<pre class="code_sample">
+static EdReactor* s_g_editorreactor = nullptr;
+
+void initApp()
+{ 
+	EdReactor::rxInit();
+	zcrxBuildClassHierarchy();
+	zcedRegCmds-&gt;addCommand(_T("EDITORREACTOR_COMMANDS"), _T("AddEditorReactor"), _T("AddEditorReactor"), ZCRX_CMD_MODAL, AddEditorReactor);
+	zcedRegCmds-&gt;addCommand(_T("EDITORREACTOR_COMMANDS"), _T("RemoveEditorReactor"), _T("RemoveEditorReactor"), ZCRX_CMD_MODAL, RemoveEditorReactor);
+}
+
+void unloadApp()
+{ 
+	RemoveEditorReactor();
+
+	deleteZcRxClass(EdReactor::desc());
+	zcedRegCmds-&gt;removeGroup(_T("EDITORREACTOR_COMMANDS"));
+}
+
+void AddEditorReactor()
+{
+	if (!s_g_editorreactor)
+	{
+		s_g_editorreactor = new EdReactor();
+		zcedEditor-&gt;addReactor(s_g_editorreactor);
+		zcutPrintf(_T("\nEdReactor is on..."));
+	}
+}
+
+void RemoveEditorReactor()
+{
+	if(s_g_editorreactor)
+	{
+		zcedEditor-&gt;removeReactor(s_g_editorreactor);
+		delete s_g_editorreactor;
+		s_g_editorreactor = NULL;
+		zcutPrintf(_T("\nEdReactor is off..."));
+	}
+}
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">实现代码</p>
+<p class="define_text_1">请参考ZRX示例工程代码：EditorReactor</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

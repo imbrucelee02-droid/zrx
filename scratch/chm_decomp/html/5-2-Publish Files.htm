@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>发布出图</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">发布出图</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">说明</p>
+<p class="dev_body_text">由于打印接口对多文档和多布局打印较为繁琐，本章节将介绍如何用接口实现发布打印多文档的方法，发布的Layout可以是同一个dwg里面的布局，也可以是不同dwg里面的布局，这样对于多文档的处理更加便捷。</p>
+<hr algin="left"/>
+<p class="define_head_1">步骤介绍：</p>
+<p class="define_text_1">在发布多个布局之前，您需要收集每个布局的相关信息。为每个要发布的布局创建一个 DsdEntry 对象。一个 DsdEntry 对象包含布局名称、标题、覆盖的页面设置以及它所在的绘图文件。然后将这些 DsdEntry 对象添加到 DsdEntryCollection 对象中，接着通过 SetDsdEntryCollection 方法将其添加到 DsdData 对象中。
+DsdData 对象定义了发布指定布局时应使用的设置。在定义了 DsdData 对象之后，您可以使用 WriteDsd 方法创建一个 DSD 文件，以供 PUBLISH 命令或 Publisher 对象使用。
+Publisher 对象用于输出 DSD 文件中的布局。与发布对话框类似，可以使用其定义的绘图设备和设置来输出布局，或者使用 DsdEntry 对象中的覆盖页面设置通过 PublishDsd 方法进行发布。您还可以通过 PublishExecute 方法覆盖布局分配的设备。</p>
+<p class="define_text_1">?</p>
+<p class="define_text_1">下面是一个发布的完整示例：</p>
+<pre class="code_sample">
+void publish() {
+    ZcDbDatabase* pDb = zcdbCurDwg();
+    //设置pdf保存路径
+    CString pdfPath = _T("e:\\myPDF.pdf");
+    //设置打印机设备名
+    CString deviceName = _T("DWG To PDF.pc5");
+    Zcad::ErrorStatus es = Zcad::eOk;
+
+    const TCHAR *docName;
+    es = pDb-&gt;getFilename(docName);
+
+    //开始收集DSD数据的信息
+    ZcPlDSDEntries dsdEntries;
+
+    //使用迭代器遍历布局词典
+    ZcDbLayoutManager *layoutManager = zcdbHostApplicationServices()-&gt;layoutManager();
+    ZcDbDictionary *layoutDict = NULL;
+    es = pDb-&gt;getLayoutDictionary(layoutDict, ZcDb::kForRead);
+    ZcDbDictionaryIterator *layoutIterator = layoutDict-&gt;newIterator();
+
+    //如果我们只想打印图纸空间而不是模型布局,获取pDb模型空间的ID
+    ZcDbObjectId msId = zcdbSymUtil()-&gt;blockModelSpaceId(pDb);
+
+    for (; layoutIterator &amp;&amp; !layoutIterator-&gt;done(); layoutIterator-&gt;next())
+    {
+        ZcDbObjectPointer&lt;ZcDbLayout&gt; layout(layoutIterator-&gt;objectId(), ZcDb::kForRead);
+        //跳过模型空间
+        if (layout-&gt;getBlockTableRecordId() == msId)
+            continue;
+
+        const ZTCHAR *layoutName;
+        layout-&gt;getLayoutName(layoutName);
+
+        //设置DSD条目
+        ZcPlDSDEntry dsdEntry;
+
+        //修改输出的标题名加前缀，pdf单页模式会作为文件名
+        CString strPre = _T("sk_");
+        strPre += layoutName;
+        const ZTCHAR *szOutLayoutName = (LPCTSTR)strPre;
+        dsdEntry.setTitle(szOutLayoutName);
+
+        dsdEntry.setLayout(layoutName);
+        dsdEntry.setDwgName(docName);
+        //添加条目到dsd条目集合
+        dsdEntries.append(dsdEntry);
+    }
+    delete layoutIterator;
+    layoutDict-&gt;close();
+
+    //将dsd条目添加到dsd数据
+    ZcPlDSDData dsdData;
+    dsdData.setDSDEntries(dsdEntries);
+
+    //设置dsd数据项目路径
+    dsdData.setProjectPath(_T("e:\\"));
+    dsdData.setLogFilePath(_T("e:\\logdwf.log"));
+    //设置单页还是多页，如果是单页，将会使用布局名来保存文件名
+    //kSinglePDF kMultiPDF
+    dsdData.setSheetType(ZcPlDSDEntry::kMultiPDF);
+    //设置打印的份数,这个pdf打印机不能设置,始终是1
+    dsdData.setNoOfCopies(1);
+    //设置目标名,保存的文件名(单页无效)
+    dsdData.setDestinationName(pdfPath);
+    //设置提示输入dwf名，如果为true可能会提示输入文件名
+    dsdData.setPromptForDwfName(false);
+    //设置图纸集的名字,这个会显示在打印和发布详细信息中
+    dsdData.setSheetSetName(_T("PublisherSet"));
+
+    //设置当前配置和打印设备名
+    ZcPlPlotConfig *plotConfig;
+    zcplPlotConfigManager-&gt;setCurrentConfig(plotConfig, deviceName);
+
+    //执行发布程序，可能需要添加zAcPlMisc.h头文件
+    zcplPublishExecute(dsdData, plotConfig, true);
+}
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">运行效果：</p>
+<p class="define_text_1">执行以上代码后，会将dwg图纸中多个布局空间打印到同一份PDF文档中。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

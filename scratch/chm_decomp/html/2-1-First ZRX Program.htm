@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>第一个 ZRX程序</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">创建中望CAD ZRX二次开发项目</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">使用中望CAD ZRX开发向导创建项目</p>
+<p class="define_text_1">在安装ZRXSDK的过程中会自动在Visual Studio（目前仅支持Visual Studio 2017）中添加中望CAD二次开发向导，其中包含了.ZRX向导，ZRX工程向导，使用它可以很方便地创建中望CAD ZRX二次开发工程项目。</p>
+<p class="dev_body_text">以下为具体的操作步骤：</p>
+<p class="define_text_1">1.	打开Visual Studio 2017。</p>
+<p class="define_text_1">2.	在菜单中选择[文件]—&gt;[新建]—&gt;[项目]。</p>
+<p class="define_text_1">3.	根据ZWCAD的版本在新建项目窗口中的“ZRX”栏目选择相应的项目类型（需要安装对应版本的ZRXSDK），并指定项目名称和路径。</p>
+<p class="figure"><img class="pics" src="../pics/2-1-wizard-C++.png"/></p>
+<p class="define_text_1">4.	选择ZRXSDK和MFC类型，一般可以直接使用默认值。</p>
+<p class="figure"><img class="pics" src="../pics/2-1-wizard-path.png"/></p>
+<p class="define_text_1">5.	点击“OK”按钮，创建项目。</p>
+<p class="define_text_1">6.	在菜单中选择[生成]—&gt;[生成解决方案]，如生成成功则表示项目已创建成功。</p>
+<p class="figure"><img class="pics" src="../pics/2-1-wizard-success.png"/></p>
+<hr algin="left"/>
+<p class="define_head_1">创建类库项目并配置为中望CAD ZRX二次开发项目</p>
+<p class="define_text_1">通常情况下我们推荐使用中望CAD的开发向导来创建ZRX二次开发项目，因为这样更便捷，但在某些情况下可能无法使用开发向导，比如使用的Visual Studio版本不是2017，此时可以选择创建普通的类库项目并手动配置为中望CAD ZRX二次开发项目。</p>
+<p class="dev_body_text">以下为具体的操作步骤（以Visual Studio 2022为例）：</p>
+<p class="define_text_1">1.	打开Visual Studio 2022</p>
+<p class="define_text_1">2.	在开始页面中选择[创建新项目]</p>
+<p class="define_text_1">3.	通过筛选找到项目类型“动态链接库(DLL)”</p>
+<p class="define_text_1">创建C++项目</p>
+<p class="figure"><img class="pics" src="../pics/2-1-dll-C++.png"/></p>
+<p class="define_text_1">4.	点击“下一步”按钮，指定项目名称和路径，然后点击“创建”按钮，创建项目</p>
+<p class="figure"><img class="pics" src="../pics/2-1-dll-frw.png"/></p>
+<p class="define_text_1">5.	在解决方案管理器中鼠标右键点工程，选择属性-&gt;[配置属性]-&gt;[常规]中修改Windows SDK版本建议修改成最新，目标扩展名改为".zrx"，平台工具集为"Visual Studio 2017(V141)"，MFC的使用改成"在共享DLL中使用MFC"，字符集改为"使用Unicode"字符集。</p>
+<p class="figure"><img class="pics" src="../pics/2-1-dll-ref.png"/></p>
+<p class="define_text_1" id="DLL-Reference">6.	在解决方案管理器中鼠标右键点工程，选择属性-&gt;[C/C++]-&gt;[常规]附加包含目录添加SDK头文件路径如：C:\ZWCAD_2026_ZRXSDK\arxport\inc;C:\ZWCAD_2026_ZRXSDK\arxport\inc-x64</p>
+<p class="figure"><img class="pics" src="../pics/2-1-dll-ref1.png"/></p>
+<p class="define_text_1" id="DLL-Reference">7.	在解决方案管理器中鼠标右键点工程，选择属性-&gt;[C/C++]-&gt;[预处理器]中预处理器定义删除额外的定义</p>
+<p class="figure"><img class="pics" src="../pics/2-1-dll-ref2.png"/></p>
+<p class="define_text_1" id="DLL-Reference">8.	在解决方案管理器中鼠标右键点工程，选择属性-&gt;[C/C++]-&gt;[代码生成]中运行库修改成“多线程DLL(/MD)”</p>
+<p class="figure"><img class="pics" src="../pics/2-1-dll-MD.png"/></p>
+<p class="define_text_1" id="DLL-Reference">9.	在解决方案管理器中鼠标右键点工程，选择属性-&gt;[链接器]-&gt;[常规]中附加库目录添加lib库所在路径：C:\ZWCAD_2026_ZRXSDK\arxport\lib-x64</p>
+<p class="figure"><img class="pics" src="../pics/2-1-dll-libPath.png"/></p>
+<p class="define_text_1" id="DLL-Reference">10.	在解决方案管理器中鼠标右键点工程，选择属性-&gt;[链接器]-&gt;[输入]中附加依赖性输入lib文件名：ZwAuto.lib;ZwBase.lib;ZWCAD.lib;ZwDatabase.lib;ZwDatabaseMgd.lib;ZwdUI.lib;ZwGeometry.lib;ZwGs.lib;ZwPAL.lib;ZwRx.lib;ZwTc.lib;ZwUI.lib;ZwZrx.lib;</p>
+<p class="figure"><img class="pics" src="../pics/2-1-dll-libs.png"/></p>
+<p class="define_text_1">11.	添加一些示例代码</p>
+<p class="define_text_1">对于pch.h头文件，写入以下代码设置：</p>
+<pre class="code_sample">
+// pch.h: 这是预编译标头文件。
+// 下方列出的文件仅编译一次，提高了将来生成的生成性能。
+// 这还将影响 IntelliSense 性能，包括代码完成和许多代码浏览功能。
+// 但是，如果此处列出的文件中的任何一个在生成之间有更新，它们全部都将被重新编译。
+// 请勿在此处添加要频繁更新的文件，这将使得性能优势无效。
+
+#ifndef PCH_H
+#define PCH_H
+
+// 添加要在此处预编译的标头
+#include "framework.h"
+
+#include "zaccmd.h"
+#include "zAcString.h"
+#include "zgepnt3d.h"
+#include "zgeassign.h"
+#include "zdbents.h"
+#include "zdbmain.h"
+#include "zacdocman.h"
+#include "zacarray.h"
+#include "zadscodes.h"
+
+#define cmd_group_name _T("ZRXProject0")
+#endif //PCH_H
+</pre>
+<p class="define_text_1">对于framework.h头文件，写入以下代码设置：</p>
+<pre class="code_sample">#pragma once
+
+#ifndef VC_EXTRALEAN
+#define VC_EXTRALEAN            // Exclude rarely-used stuff from Windows headers
+#endif
+#include <sdkddkver.h>
+
+#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // some CString constructors will be explicit
+
+#include <afxwin.h>         // MFC core and standard components
+#include <afxext.h>         // MFC extensions
+
+#ifndef _AFX_NO_OLE_SUPPORT
+#include <afxole.h>         // MFC OLE classes
+#include <afxodlgs.h>       // MFC OLE dialog classes
+#include <afxdisp.h>        // MFC Automation classes
+#endif // _AFX_NO_OLE_SUPPORT
+
+#ifndef _AFX_NO_DB_SUPPORT
+#include <afxdb.h>                      // MFC ODBC database classes
+#endif // _AFX_NO_DB_SUPPORT
+
+#ifndef _AFX_NO_DAO_SUPPORT
+#include <afxdao.h>                     // MFC DAO database classes
+#endif // _AFX_NO_DAO_SUPPORT
+
+#ifndef _AFX_NO_OLE_SUPPORT
+#include <afxdtctl.h>           // MFC support for Internet Explorer 4 Common Controls
+#endif
+#ifndef _AFX_NO_AFXCMN_SUPPORT
+#include <afxcmn.h>                     // MFC support for Windows Common Controls
+#endif // _AFX_NO_AFXCMN_SUPPORT</afxcmn.h></afxdtctl.h></afxdao.h></afxdb.h></afxdisp.h></afxodlgs.h></afxole.h></afxext.h></afxwin.h></sdkddkver.h></pre>
+<p class="define_text_1">对于dllmain.CPP文件，写入以下代码设置：</p>
+<pre class="code_sample">// dllmain.cpp : 定义 DLL 应用程序的入口点。
+#include "pch.h"
+#include "framework.h"
+#include "zAcExtensionModule.h"
+
+// Define the sole extension module object.
+// Now you can use the CZcModuleResourceOverride class in your application to switch to the correct resource instance.
+ZC_IMPLEMENT_EXTENSION_MODULE(ZrxProject0DLL)
+
+// DLL Entry Point
+extern "C" int APIENTRY
+DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID lpReserved)
+{
+	// Remove this if you use lpReserved
+	UNREFERENCED_PARAMETER(lpReserved);
+
+	if (dwReason == DLL_PROCESS_ATTACH)
+	{
+		ZrxProject0DLL.AttachInstance(hInstance);
+	}
+	else if (dwReason == DLL_PROCESS_DETACH)
+	{
+		ZrxProject0DLL.DetachInstance();
+	}
+	return 1;
+}</pre>
+<p class="define_text_1">新增rxentrypoint.cpp文件，写入以下代码设置：</p>
+<pre class="code_sample">#include "pch.h"
+
+#include "zadsmigr.h"
+#include "zadsdef.h"
+#include "zadscodes.h"
+#include "zacestext.h"
+#include "zacedads.h"
+
+void helloworld()
+{
+	zcutPrintf(_T("\nHello world!"));
+}
+
+void initapp()
+{
+	zcedRegCmds-&gt;addCommand(cmd_group_name, _T("helloworld"), _T("helloworld"), ZCRX_CMD_MODAL, helloworld);
+}
+
+void unloadapp()
+{
+	zcedRegCmds-&gt;removeGroup(cmd_group_name);
+}
+
+extern "C" ZcRx::AppRetCode zcrxEntryPoint(ZcRx::AppMsgCode msg, void* appId)
+{
+	switch (msg)
+	{
+	case ZcRx::kInitAppMsg:
+	{
+		zcrxDynamicLinker-&gt;unlockApplication(appId);
+		zcrxDynamicLinker-&gt;registerAppMDIAware(appId);
+		initapp();
+	}
+	break;
+	case ZcRx::kUnloadAppMsg:
+	{
+		unloadapp();
+	}
+	break;
+
+	default:
+		break;
+	}
+	return ZcRx::kRetOK;
+}
+
+
+#ifdef _WIN64
+#pragma comment(linker, "/export:zcrxEntryPoint,PRIVATE")
+#pragma comment(linker, "/export:zcrxGetApiVersion,PRIVATE")
+#else // WIN32
+#pragma comment(linker, "/export:_zcrxEntryPoint,PRIVATE")
+#pragma comment(linker, "/export:_zcrxGetApiVersion,PRIVATE")
+#endif
+
+</pre>
+<p class="define_text_1">12.	在菜单中选择[生成]—&gt;[生成解决方案]，如生成成功则表示项目已创建成功</p>
+<p class="figure"><img class="pics" src="../pics/2-1-Dll-success.png"/></p>
+<p class="define_text_1">注意：	通过两种新建ZRX工程对比可知，手动创建ZRX工程非常复杂而且容易出错，万不得已的情况下最好用向导创建工程，如果确实没有VS2017工具可以用较新的VS版本打开SDK中Sample示例选取工程进行修改。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

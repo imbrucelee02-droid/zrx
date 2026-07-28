@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>获取用户输入信息</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">获取用户输入信息</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">说明</p>
+<p class="dev_body_text">本章节将介绍如何通过命令行与用户进行交互以取得输入信息，如获取用户输入的一个实数，字符串，关键字等。</p>
+<hr algin="left"/>
+<p class="define_head_1">用户输入函数介绍</p>
+<p class="define_text_1">下面表格列举了各种获取用户输入信息所需的函数，后续文章将逐一演示如何使用这些函数。</p>
+<table class="table-desc">
+<tr>
+<th>函数名</th>
+<th>作用</th>
+<th>参数</th>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#GetDouble">zcedGetReal()</a></td>
+<td class="table-item-odd">提示用户输入一个实数</td>
+<td class="table-item-odd">zds_real</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#GetInteger">zcedGetInt()</a></td>
+<td class="table-item-odd">提示用户输入一个整数</td>
+<td class="table-item-odd">int</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#GetKeywords">zcedGetKword()</a></td>
+<td class="table-item-odd">提示用户输入关键字</td>
+<td class="table-item-odd">TCHAR</td>
+</tr><tr>
+<td class="table-item-odd"><a href="#GetString">zcedGetString()</a></td>
+<td class="table-item-odd">提示用户输入一个字符串</td>
+<td class="table-item-odd">TCHAR</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1" id="GetDouble">获取一个实数<span class="table-item-odd">zcedGetReal</span>()</p>
+<pre class="code_sample">
+void getReal()
+{
+	zds_real dReal;
+	if (zcedGetReal(_T("\nInput a real number:"), &amp;dReal) == RTNORM)
+		zcutPrintf(_T("\nThe real number is %g"), dReal);
+	else
+		zcutPrintf(_T("\nFailed!"));
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用户输入一个实数"Input a real number:"，如果用户输入10.2，最终命令行输出“The real number is 10.2”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="GetInteger">获取一个整数<span class="table-item-odd">zcedGetInt</span>()</p>
+<pre class="code_sample">
+void getInt()
+{
+	int nRet;
+	if (zcedGetInt(_T("\nInput a Integer:"), &amp;nRet) == RTNORM)
+		zcutPrintf(_T("\nThe Integer is %d"), nRet);
+	else
+		zcutPrintf(_T("\nFailed!"));
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用户输入一个整数"Input a Integer:"，如果用户输入10，最终命令行输出“The Integer is 10”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="GetKeywords">获取一个关键字<span class="table-item-odd">zcedGetKword</span>()</p>
+<pre class="code_sample">
+void getKWord()
+{
+	TCHAR keyWord[10] = { 0 };
+	zcedInitGet(0, _T("A B C D"));
+	int retVal = zcedGetKword(_T("Input KeyWord [Branch A(A)/Branch B(B)/Branch C(C)/Branch D(D)] <d>: "), keyWord);
+	if (retVal == RTNORM)
+	{
+		if (_tcscmp(keyWord, _T("A")) == 0)
+			zcutPrintf(_T("\nThis is Branch A"));
+		else if (_tcscmp(keyWord, _T("B")) == 0)
+			zcutPrintf(_T("\nThis is Branch B"));
+		else if (_tcscmp(keyWord, _T("C")) == 0)
+			zcutPrintf(_T("\nThis is Branch C"));
+		else if (_tcscmp(keyWord, _T("D")) == 0)
+			zcutPrintf(_T("\nThis is Branch D"));
+	}
+	else if (retVal == RTCAN)
+		zcutPrintf(_T("\nYou have cancelled!"));
+	else if (retVal == RTNONE)
+		zcutPrintf(_T("\nYou Have not input, and the default is Branch D"));
+}
+</d></pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用户输入一个关键字"Input KeyWord [Branch A(A)/Branch B(B)/Branch C(C)/Branch D(D)]:"，如果用户输入B，最终命令出“This is Branch B”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="GetString">获取一个角度<span class="table-item-odd">zcedGetString</span>()</p>
+<pre class="code_sample">
+void getString()
+{
+	TCHAR szStr[1024] = { 0 };
+	if (zcedGetString(0, _T("\nInput a string:"), szStr) == RTNORM)   // If first parameter is not 0, you can input the Space
+		zcutPrintf(_T("\nThe string is %s"), szStr);
+	else
+		zcutPrintf(_T("\nFailed!"));
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用户输入一个字符串"Input a string:"，如果用户输入hello，最终命令行输出“The string is hello”。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

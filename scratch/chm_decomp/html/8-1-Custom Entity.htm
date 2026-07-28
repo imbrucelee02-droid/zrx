@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>自定义实体</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">自定义实体</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="body_text">通过自定义实体，我们可以将多个基础实体封装成为一个整体，并自定义该实体的存储、显示和行为（分解、移动）等属性。</p>
+<hr/>
+<p class="define_head_1">通过向导生成自定义实体类</p>
+<p class="define_text_1">1. 右键工程选择添加新项，在对话框中找到ZrxWizExt向导，选择ZrxCustomObjectWizard</p>
+<p class="define_text_1">2. 设置自定义实体名称后，选择父类为ZcDbEntity，勾选Osnap Protocal和Grip-points Protocal，两者分别用于自定义实体的捕捉点，以及实体被选中时显示的夹点。</p>
+<p class="define_text_1">通过向导自动生成的自定义实体类中，包含了多个需要我们实现的虚函数：</p>
+<pre class="code_sample">
+class CMyEnt 
+	: public ZcDbEntity
+{
+    ...
+public:
+    CMyEnt();
+    virtual ~CMyEnt();
+
+    // 用于从DWG图纸中读写自定义实体相关的数据
+    virtual Zcad::ErrorStatus dwgOutFields (ZcDbDwgFiler *pFiler) const;
+    virtual Zcad::ErrorStatus dwgInFields (ZcDbDwgFiler *pFiler);
+
+protected:
+    // 绘制图像
+    virtual ZSoft::Boolean subWorldDraw (ZcGiWorldDraw *mode);
+    virtual ZSoft::UInt32 subSetAttributes (ZcGiDrawableTraits *traits);
+
+public:
+    // 设置捕捉点
+    virtual Zcad::ErrorStatus subGetOsnapPoints(
+        ZcDb::OsnapMode osnapMode,
+        ZSoft::GsMarker gsSelectionMark,
+        const ZcGePoint3d &amp;pickPoint,
+        const ZcGePoint3d &amp;lastPoint,
+        const ZcGeMatrix3d &amp;viewXform,
+        ZcGePoint3dArray &amp;snapPoints,
+        ZcDbIntArray &amp;geomIds) const;
+
+    virtual Zcad::ErrorStatus subGetOsnapPoints(
+        ZcDb::OsnapMode osnapMode,
+        ZSoft::GsMarker gsSelectionMark,
+        const ZcGePoint3d &amp;pickPoint,
+        const ZcGePoint3d &amp;lastPoint,
+        const ZcGeMatrix3d &amp;viewXform,
+        ZcGePoint3dArray &amp;snapPoints,
+        ZcDbIntArray &amp;geomIds,
+        const ZcGeMatrix3d &amp;insertionMat) const;
+
+    // 设置夹点
+    virtual Zcad::ErrorStatus subGetGripPoints(
+        ZcGePoint3dArray &amp;gripPoints, 
+        ZcDbIntArray &amp;osnapModes, 
+        ZcDbIntArray &amp;geomIds) const;
+    virtual Zcad::ErrorStatus subMoveGripPointsAt(
+        const ZcDbIntArray &amp;indices, 
+        const ZcGeVector3d &amp;offset);
+    virtual Zcad::ErrorStatus subGetGripPoints(
+        ZcDbGripDataPtrArray &amp;grips, 
+        const double curViewUnitSize, 
+        const int gripSize,
+        const ZcGeVector3d &amp;curViewDir, 
+        const int bitflags) const;
+    virtual Zcad::ErrorStatus subMoveGripPointsAt(
+        const ZcDbVoidPtrArray &amp;gripAppData, 
+        const ZcGeVector3d &amp;offset, 
+        const int bitflags);
+    ...
+}
+</pre>
+<hr/>
+<p class="define_head_1">创建自定义实体</p>
+<p class="define_text_1">本章将创建一个三角形的自定义实体，实现了基本的夹点编辑和获取自动捕捉点等行为。</p>
+<p class="define_text_1"><img src="../pics/8-1-custent.gif"/></p>
+<p class="define_head_2">设置实体名称</p>
+<p class="define_text_2">在ZCRX_DXF_DEFINE_MEMBERS宏中，可以修改当前自定义实体显示的名称，其中标红的为属性列表中展示的对象名称，标蓝的为实体说明，一般会在代理对象对话框中显示：</p>
+<p class="define_text_2"><img src="../pics/8-1-proxy_dialog.png"/></p>
+<pre class="code_sample">
+    ZCRX_DXF_DEFINE_MEMBERS (
+        CMyEntity, ZcDbEntity,
+        ZcDb::kDHL_CURRENT, ZcDb::kMReleaseCurrent, 
+        ZcDbProxyEntity::kNoOperation, <font color="red">MYENTITY</font>, <font color="blue">This is MYENTITY</font>
+    )
+</pre>
+<p class="define_head_2">添加私有变量</p>
+<p class="define_text_2">在类中添加一个ZcGePoint3d数组用于记录三角形三个顶点的值：</p>
+<pre class="code_sample">
+    class CMyEnt 
+        : public ZcDbEntity
+    {
+        ...
+    private:
+        ZcGePoint3d m_verts[3];
+        ...
+    };
+</pre>
+<p class="define_head_2">构造函数</p>
+<pre class="code_sample">
+    // 传入三个初始坐标，用于设置三个端点
+    CMyEnt(ZcGePoint3d pt1, ZcGePoint3d pt2, ZcGePoint3d pt3) {
+        m_verts[0] = pt1;
+        m_verts[1] = pt2;
+        m_verts[2] = pt3;
+    }
+</pre>
+<p class="define_head_2">在DWG中读写顶点数据</p>
+<p class="define_text_2">需要将顶点的坐标值写入到DWG图纸中，这样下次打开图纸时，自定义实体才能正确显示：</p>
+<pre class="code_sample">
+    Zcad::ErrorStatus CMyEnt::dwgOutFields (ZcDbDwgFiler *pFiler) const {
+        assertReadEnabled ();
+        Zcad::ErrorStatus es = ZcDbEntity::dwgOutFields(pFiler);
+        if (es != Zcad::eOk)
+            return (es);
+        if ((es = pFiler-&gt;writeUInt32(CMyEnt::kCurrentVersionNumber)) != Zcad::eOk)
+            return (es);
+        //将顶点坐标写入dwg中
+        for (int i = 0; i &lt; 3; ++i) {
+            pFiler-&gt;writeItem(m_verts[i]);
+        }
+
+        return (pFiler-&gt;filerStatus());
+    }
+
+    Zcad::ErrorStatus CMyEnt::dwgInFields(ZcDbDwgFiler * pFiler) {
+        assertWriteEnabled();
+        Zcad::ErrorStatus es = ZcDbEntity::dwgInFields(pFiler);
+        if (es != Zcad::eOk)
+            return (es);
+        ZSoft::UInt32 version = 0;
+        if ((es = pFiler-&gt;readUInt32(&amp;version)) != Zcad::eOk)
+            return (es);
+        if (version &gt; CMyEnt::kCurrentVersionNumber)
+            return (Zcad::eMakeMeProxy);
+        //从dwg中读取顶点坐标
+        for (int i = 0; i &lt; 3; ++i) {
+            pFiler-&gt;readItem(&amp;m_verts[i]);
+        }
+
+        return (pFiler-&gt;filerStatus());
+    }
+</pre>
+<p class="define_head_2">绘制图像</p>
+<p class="define_text_2">在subWorldDraw中可以绘制所需的实体，同时可以设置不同子实体的颜色等属性：</p>
+<pre class="code_sample">
+    ZSoft::Boolean CMyEnt::subWorldDraw(ZcGiWorldDraw * mode) {
+        assertReadEnabled();
+        
+        for (int i = 0; i &lt; 3; ++i) {
+            int nextIndex = i + 1;
+            if (i == 2) {
+                nextIndex = 0;
+            }
+
+            // 设置后会影响后面绘制的所有实体颜色，如果只需要设置其中一个实体，需要通过该接口重新改回原色
+            mode-&gt;subEntityTraits().setColor(i + 1);
+            ZcGePoint3d points[2];
+            points[0] = m_verts[i];
+            points[1] = m_verts[nextIndex];
+            // geometry()下还能绘制其他基础实体对象，由此我们可以绘制出我们需要自定义实体
+            mode-&gt;geometry().polyline(2, points);
+        }
+
+        return (ZcDbEntity::subWorldDraw(mode));
+    }
+</pre>
+<p class="define_head_2">设置夹点</p>
+<p class="define_text_2">指定夹点subGetGripPoints和移动夹点subMoveGripPointsAt两个函数均有两个重载方法，根据默认生成的注释，其中一个为较旧的方法，当我们需要使用旧重载方法时，需要在新方法中返回eNotImplemented。</p>
+<p class="define_text_2">由于本文创建的实体对象夹点功能较为简单，故仅使用ZcGePoint3dArray记录夹点坐标，如果需要在夹点中记录相关信息，则可以使用带有ZcDbGripDataPtrArray参数的方法：</p>
+<pre class="code_sample">
+    Zcad::ErrorStatus CMyEnt::subGetGripPoints(
+        ZcGePoint3dArray &amp;gripPoints, 
+        ZcDbIntArray &amp;osnapModes, 
+        ZcDbIntArray &amp;geomIds
+    ) const {
+        assertReadEnabled();
+        //----- This method is never called unless you return eNotImplemented 
+        //----- from the new getGripPoints() method below (which is the default implementation)
+        
+        // 将三角形端点加入夹点集合
+        for (int i = 0; i &lt; 3; ++i) {
+            gripPoints.append(m_verts[i]);
+        }
+
+        return Zcad::eOk;
+    }
+
+    Zcad::ErrorStatus CMyEnt::subMoveGripPointsAt(
+        const ZcDbIntArray &amp;indices, 
+        const ZcGeVector3d &amp;offset
+    ) {
+        assertWriteEnabled();
+        //----- This method is never called unless you return eNotImplemented 
+        //----- from the new moveGripPointsAt() method below (which is the default implementation)
+
+        // 根据偏移向量修改交点坐标
+        m_verts[indices[0]] += offset;
+
+        recordGraphicsModified();
+        return Zcad::eOk;
+    }
+
+    Zcad::ErrorStatus CMyEnt::subGetGripPoints(
+        ZcDbGripDataPtrArray &amp;grips, 
+        const double curViewUnitSize, 
+        const int gripSize,
+        const ZcGeVector3d &amp;curViewDir, 
+        const int bitflags
+    ) const {
+        assertReadEnabled();
+
+        //----- If you return eNotImplemented here, that will force ZwCAD to call
+        //----- the older getGripPoints() implementation. The call below may return
+        //----- eNotImplemented depending of your base class.
+        return Zcad::eNotImplementedYet;
+
+        //return (ZcDbEntity::subGetGripPoints(grips, curViewUnitSize, gripSize, curViewDir, bitflags));
+    }
+
+    Zcad::ErrorStatus CMyEnt::subMoveGripPointsAt(
+        const ZcDbVoidPtrArray &amp;gripAppData, 
+        const ZcGeVector3d &amp;offset, 
+        const int bitflags
+    ) {
+        assertWriteEnabled();
+
+        //----- If you return eNotImplemented here, that will force ZwCAD to call
+        //----- the older getGripPoints() implementation. The call below may return
+        //----- eNotImplemented depending of your base class.
+        return Zcad::eNotImplementedYet;
+        //return (ZcDbEntity::subMoveGripPointsAt(gripAppData, offset, bitflags));
+    }
+</pre>
+<p class="define_head_2">设置捕捉节点</p>
+<p class="define_text_2">通过设置捕捉点，在CAD中使用捕捉功能时，才能识别到自定义实体中的节点，方便绘图时快速定位到特征节点，subGetOsnapPoints同样存在两个重载函数，我们选择使用参数较少的一个方法来实现：</p>
+<pre class="code_sample">
+    Zcad::ErrorStatus   CMyEnt::subGetOsnapPoints(
+        ZcDb::OsnapMode     osnapMode,
+        ZSoft::GsMarker     gsSelectionMark,
+        const ZcGePoint3d&amp;  pickPoint,
+        const ZcGePoint3d&amp;  lastPoint,
+        const ZcGeMatrix3d&amp; viewXform,
+        ZcGePoint3dArray&amp;   snapPoints,
+        ZcDbIntArray &amp;   geomIds
+    ) const {
+        assertReadEnabled();
+
+        // 绘制一个具有相同节点的多段线，通过调用多段线的捕捉节点来实现自定义实体的捕捉点
+        ZcDbPolyline* pPoly = new ZcDbPolyline();
+        for (int i = 0; i &lt; 3; ++i) {
+            pPoly-&gt;addVertexAt(i, ZcGePoint2d(m_verts[i].x, m_verts[i].y));
+        }
+        pPoly-&gt;setClosed(true);
+        Zcad::ErrorStatus es = pPoly-&gt;getOsnapPoints(osnapMode, gsSelectionMark, 
+            pickPoint, lastPoint, viewXform, snapPoints, geomIds);
+        delete pPoly;
+
+        return es;
+    }
+</pre>
+<hr/>
+<p class="define_head_1">在模型空间中插入自定义实体</p>
+<p class="define_text_1">操作与插入普通实体相同，需要注意的是，我们要在ZRX初始化时注册自定义实体类，并在ZRX卸载时删除该类：</p>
+<pre class="code_sample">
+void addMyEnt() {
+    CMyEnt* pEnt = new CMyEnt(ZcGePoint3d(0, 0, 0), ZcGePoint3d(100, 0, 0), ZcGePoint3d(100, 100, 30));
+    PostToModelSpace(pEnt, zcdbCurDwg());
+}
+
+void initapp()
+{
+    CMyEnt::rxInit();
+    zcedRegCmds-&gt;addCommand(cmd_group_name, _T("addMyEnt"), _T("addMyEnt"), ZCRX_CMD_MODAL, addMyEnt);
+}
+
+void unloadapp()
+{
+    deleteZcRxClass(CMyEnt::desc());
+    zcedRegCmds-&gt;removeGroup(cmd_group_name);
+}
+</pre>
+<hr/>
+<p class="define_head_1">参考示例</p>
+<p class="define_text_1">更多用法请参考zrxsdk示例中的SignDb工程。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

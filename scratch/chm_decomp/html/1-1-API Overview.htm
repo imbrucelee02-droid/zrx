@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>概述</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">中望CAD ZRX二次开发概述</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">总览</p>
+<p class="define_text_1">ZRX是一个以C++语言为基础的面向对象的开发环境和应用程序接口。ZRX程序本质上是Windows动态链接库（Dynamic Link Library ，缩写DLL）。该接口通过封装中望CAD对象模型，提供对图形数据、用户界面及文档结构的全面控制能力，开发者可高效实现几何创建、编辑操作、自定义命令、界面定制等任务。其面向对象的设计、与中望CAD内核的无缝集成以及跨版本兼容特性，为构建自动化工具、行业插件或企业级设计系统提供了稳定可靠的开发平台。</p>
+<p class="define_text_1">要使用中望CAD的ZRX接口进行二次开发，开发者需要先配置开发环境，使用SDK提供的接口编写程序，然后编译生成中望CAD ZRX应用程序(ZRX文件)，最后在中望CAD中加载运行。一般情况下，中望CAD连续3~4个年度版本内不会修改SDK中的接口，所以使用旧版本SDK编译的ZRX文件可以在新版本上加载，在二进制兼容版本内开发者无需修改源码和重新编译即可进行适配中望平台新年度版本的升级。</p>
+<p class="define_text_1">同时，为了方便开发者学习和利用已有的开发资源，中望CAD ZRX接口于Autocad的ZRX接口非常相似。关于如何把Autocad上的ZRX程序移植到中望CAD，请参考《中望CAD ZRX移植指南》。</p>
+<table class="table-desc">
+<tr>
+<th>中望CAD版本(二进制兼容)</th>
+<th>开发环境</th>
+<th>平台工具集</th>
+<th>兼容Autocad ZRX接口版本</th>
+</tr>
+<tr>
+<td class="table-item-odd">中望CAD2017~中望CAD2020</td>
+<td class="table-item-odd">Visual Studio 2010</td>
+<td class="table-item-odd">V140</td>
+<td class="table-item-odd">Autocad 2008</td>
+</tr>
+<tr>
+<td class="table-item-odd">中望CAD2021~中望CAD2024</td>
+<td class="table-item-odd">Visual Studio 2017 15.9及以上</td>
+<td class="table-item-odd">V141</td>
+<td class="table-item-odd">Autocad 2019</td>
+</tr>
+<tr>
+<td class="table-item-odd">中望CAD2025~中望CAD2026</td>
+<td class="table-item-odd">Visual Studio 2017 15.9及以上</td>
+<td class="table-item-odd">V141</td>
+<td class="table-item-odd">Autocad 2024</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1">二进制兼容性</p>
+<p class="define_text_1">中望CAD 2021~中望CAD 2024版本的ZRX二次开发程序是二进制相互兼容的，可以基于中望CAD 2021/22/23/24的任一版本接口进行二次开发，接口和Autocad 2019兼容。中望CAD 2025版本升级了接口，和Autocad 2024兼容，需要基于中望CAD 2025的接口重新编译ZRX文件，然后才能在中望CAD 2025上加载使用,因为中望CAD 2025版本和中望CAD 2026版本有二进制兼容关系编译的2025版本的ZRX也可以在中望2026版本加载使用。</p>
+<hr algin="left"/>
+<p class="define_head_1">开发环境</p>
+<p class="define_text_1">开发使用的平台工具集版本要求为V141，Visual Studio推荐使用2017（15.9及以上）及更高的版本（如2019/2022/...），高于VS2017以上的版本还需要单独安装V141平台工具编译环境。</p>
+<hr algin="left"/>
+<p class="define_head_1">操作系统</p>
+<p class="define_text_1">推荐使用Windows 10 (1703)及以上版本，具体见<a href="https://learn.microsoft.com/en-us/dotnet/framework/get-started/system-requirements" rel="noopener noreferrer" target="_blank">.NET Framework 4.7系统支持</a>。</p>
+<hr algin="left"/>
+<p class="define_head_1">加载程序</p>
+<p class="define_text_1">在中望CAD中可使用"ZRX"命令"L"分支或者"APPLOAD"加载程序（ZRX文件）。程序加载后在中望CAD运行期间可以被卸载，如果需要修改代码后重新加载，使用"ZRX"命令"U"分支或者"APPLOAD"卸载，重新编译代码再加载。</p>
+<hr algin="left"/>
+<p class="define_head_1">开发步骤</p>
+<p class="define_text_1">以下为开发一个中望CAD ZRX程序的简要步骤描述，在后续章节会做更详细的介绍：</p>
+<p class="define_text_1">1. 下载并安装ZRXSDK。</p>
+<p class="define_text_1">2. 在Visual Studio2017中，新建项目选择Visual C++下的ZRX向导。</p>
+<p class="define_text_1">3. 在弹出的对话框选择Extension MFC DLL using Shared MFC DLL。</p>
+<p class="define_text_1">4. 点击确定完成工程创建。</p>
+<p class="define_text_1">5. 使用中望CAD的ZRX接口编写程序代码。</p>
+<p class="define_text_1">6. 在Visual Studio中把程序代码编译为ZRX文件。</p>
+<p class="define_text_1">7. 启动中望CAD并使用APPLOAD命令加载第6步生成的ZRX文件。</p>
+<p class="define_text_1">接下来就可以执行ZRX程序中自定义的命令了。</p>
+<hr algin="left"/>
+<p class="define_head_1">加载方式</p>
+<p class="define_text_1">中望CAD中有以下与ZRX二次开发加载方式：</p>
+<table class="table-desc">
+<tr>
+<th>方式</th>
+<th>说明</th>
+</tr>
+<tr>
+<td class="table-item-odd">ZRX命令</td>
+<td class="table-item-odd">L分支加载ZRX文件，U分支卸载ZRX文件，?分支显示加载了哪些ZRX文件。</td>
+</tr>
+<tr>
+<td class="table-item-odd">APPLOAD命令</td>
+<td class="table-item-odd">加载ZRX文件。</td>
+</tr>
+<tr>
+<td class="table-item-odd">拖拽ZRX文件</td>
+<td class="table-item-odd">直接在文件夹中拖拽ZRX文件到ZWCAD模型空间区域加载。</td>
+</tr>
+<tr>
+<td class="table-item-odd">zwcad.rx文件</td>
+<td class="table-item-odd">使用zwcad.rx文件方式自动加载ZRX文件列表。</td>
+</tr>
+<tr>
+<td class="table-item-odd">注册表方式</td>
+<td class="table-item-odd">通过填写注册表信息完成自动加载zrx或者按需加载。</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1">说明</p>
+<p class="define_text_1">本文档旨在指导开发者理解中望CAD平台上关于ZRX二次开发基本概念，并介绍开发环境的搭建方法和常用接口使用示例，如果本文档无法解决您的问题，请联系邮箱<a href="mailto:zdn@zwcad.com"><span lang="EN-US" style="FONT-SIZE: 12pt">zdn@zwcad.com</span></a>或者中望支持人员寻求帮助。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

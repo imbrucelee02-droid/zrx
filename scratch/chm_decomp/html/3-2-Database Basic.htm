@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>DWG数据库基本操作</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">DWG数据库基本操作</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">DWG数据库基本操作</p>
+<p class="define_text_1">本章节将介绍DWG数据库的基本操作，包括数据库对象的创建、获取和保存为DWG文件的方法，还有如何对数据库中的符号表和对象进行编辑操作。</p>
+<hr algin="left"/>
+<p class="define_head_1">数据库对象的创建、获取和保存</p>
+<p class="define_head_2">下表列举了一些常用的数据库对象创建、获取和保存操作接口：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#sample1">ZcDbDatabase::readDwgFile()</a></td>
+<td class="table-item-odd">读取DWG文件的内容到数据库对象中（不会打开该DWG文件为活动文档）</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#sample2">zcdbHostApplicationServices()-&gt;workingDatabase()</a></td>
+<td class="table-item-odd">获取当前活动文档的数据库对象</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#sample3">ZcDbDatabase::saveAs()</a></td>
+<td class="table-item-odd">把数据库对象保存为DWG文件</td>
+</tr>
+</table>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2" id="sample1">1. 读取DWG文件内容并列出所有实体类型</p>
+<pre class="code_sample">
+ void ZWReadDwg()
+{
+	// 使用false作为构造函数的参数，创建一个空的图形数据库
+    // 这样保证图形数据库仅仅包含读入的内容    
+    ZcDbDatabase *pDb = new ZcDbDatabase(false);
+    // ZcDbDatabase::readDwgFile()函数可以自动添加dwg扩名 
+	CString filePath;
+	filePath = _T("D:\\test.dwg");
+    pDb-&gt;readDwgFile(filePath, _SH_DENYWR);
+	// 获得模型空间的所有实体
+	ZcDbObjectIdArray	allEntIds	= CUtil::GetAllEntityIds(NULL, pDb);
+	for (int i = 0; i &lt; allEntIds.length(); i++)
+	{
+		ZcDbEntity *pEnt = NULL;
+		if(zcdbOpenObject(pEnt,	allEntIds[i], ZcDb::kForRead) == Zcad::eOk)
+		{
+			zcutPrintf(TEXT("\n类名称: %s"), (pEnt-&gt;isA())-&gt;name());
+			pEnt-&gt;close();
+		}
+	}
+
+	// 使用saveAs成员函数时，必须指定包含dwg扩展名的文件名称 
+    pDb-&gt;saveAs(filePath);
+	// 删除图形数据库
+    delete pDb;
+}</pre>
+<p class="define_text_1">这个命令需要遍历图形数据库中的所有实体，因此我们来定义公共函数CUtil::GetAllEntitylds，用它来获取图形数据库的模型空间里的所有实体： </p>
+<pre class="code_sample">
+    //声明部分
+static ZcDbObjectIdArray GetAllEntityIds(const TCHAR* layerName	=NULL,	ZcDbDatabase	*pDb	= zcdbHostApplicationServices()-&gt;workingDatabase());
+//实现部分
+ZcDbObjectIdArray CUtil::GetAllEntityIds( const TCHAR* layerName, ZcDbDatabase *pDb )
+{
+	ZcDbObjectIdArray entIds;		// 满足条件的实体集合
+	bool bFilterLayer = false;			// 是否需要过滤图层
+	ZcDbObjectId layerId;
+	// 获得指定图层的对象ID
+	if (layerName != NULL)
+	{
+		ZcDbLayerTable *pLayerTbl = NULL;
+		zcdbHostApplicationServices()-&gt;workingDatabase()
+			-&gt;getSymbolTable(pLayerTbl, ZcDb::kForRead);
+		if (!pLayerTbl-&gt;has(layerName))
+		{
+			pLayerTbl-&gt;close();
+			return entIds;
+		}
+		pLayerTbl-&gt;getAt(layerName, layerId);
+		pLayerTbl-&gt;close();
+		bFilterLayer = true;
+	}
+	// 获得块表
+	ZcDbBlockTable *pBlkTbl = NULL;
+	pDb-&gt;getBlockTable(pBlkTbl, ZcDb::kForRead);
+	
+	// 获得模型空间的块表记录
+	ZcDbBlockTableRecord *pBlkTblRcd = NULL;
+	pBlkTbl-&gt;getAt(ZCDB_MODEL_SPACE, pBlkTblRcd, ZcDb::kForRead);
+	pBlkTbl-&gt;close();
+	// 创建遍历器，依次访问模型空间的每一个实体
+	ZcDbBlockTableRecordIterator *it = NULL;
+	pBlkTblRcd-&gt;newIterator(it);
+	for (it-&gt;start(); !it-&gt;done(); it-&gt;step())
+	{
+		ZcDbEntity *pEnt = NULL;
+		Zcad::ErrorStatus es = it-&gt;getEntity(pEnt, ZcDb::kForRead);
+		if (es == Zcad::eOk)
+		{
+			if (bFilterLayer)				// 过滤图层
+			{
+				if (pEnt-&gt;layerId() == layerId)
+				{
+entIds.append(pEnt-&gt;objectId());
+				}				
+			}
+			else
+			{
+				entIds.append(pEnt-&gt;objectId());
+			}
+			
+			pEnt-&gt;close();
+		}
+		else
+		{
+		zcutPrintf(TEXT("\nCUtil::GetAllEntityIds中打开实体失败(错误代码:%d)."), (int)es);
+		}
+	}
+	delete it;
+	pBlkTblRcd-&gt;close();
+	return entIds;
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">将ZWReadDwg()注册成立命令，执行后D盘下读取test.dwg，并输出模型空间中所有实体的类型。</p>
+<p class="define_head_2" id="sample2">2. 打开指定DWG文件</p>
+<pre class="code_sample">
+注意，由于涉及文档打开操作，需要注册命令为ZCRX_CMD_SESSION模式，不然容易引发以外结果
+zcedRegCmds-&gt;addCommand(cmd_group_name, _T("test"), _T("test"), ZCRX_CMD_SESSION, test);
+
+void openDoc(void* param)
+{
+	const ZTCHAR* filename = (const ZTCHAR*)param;
+	zcDocManager-&gt;appContextOpenDocument(filename);
+}
+
+void test()
+{
+	ZcString fname = _T("D:/test.dwg");
+	ZTCHAR fullPath[1024];
+	if (RTNORM != zcedFindFile(fname, fullPath))
+	{
+		zcutPrintf(_T("File Not Found: %s"), fname.kACharPtr());
+		return;
+	}
+	zcDocManager-&gt;executeInApplicationContext(openDoc, fullPath);
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在ZWCAD中打开D盘目录下的文件test.dwg</p>
+<p class="define_head_2" id="sample3">3. 创建数据库对象并保存为DWG文件</p>
+<pre class="code_sample">
+void ZWCreateDwg2 ()
+{
+//创建新的图形数据库，分配内存空间
+ZcDbDatabase *pDb = new ZcDbDatabase(true, false);
+//创建两个圆
+ZcDbCircle *pCirl = new ZcDbCircle(ZcGePoint3d (1,1,1), ZcGeVector3d(0,0,1), 1.0);
+CUtil::PostToModelSpace(pCirl, pDb);
+ZcDbCircle *pCir2 = new ZcDbCircle(ZcGePoint3d(4,4,4), ZcGeVector3d(0,0,1), 2.0);
+CUtil::PostToModelSpace(pCir2, pDb);
+//调整DWG文件的视图
+CUtil::DwgZoomExtent(pDb);
+CString filePath;
+filePath = _T("D:\\test2.dwg");
+pDb-&gt;saveAs(filePath);
+delete pDb;	// pDb不是数据库的常驻对象，必须手工销毁
+}</pre>
+<p class="define_text_1">CUtil::PostToModelSpace添加实体到数据库公共函数：</p>
+<pre class="code_sample">
+ZcDbObjectId CUtil::PostToModelSpace( ZcDbEntity *pEnt, ZcDbDatabase *pDb )
+{
+	// 检查输入参数的有效性
+	assert (pEnt);		// 等效于assert (pEnt != NULL);
+	
+	// 获得当前图形数据库的块表
+	ZcDbBlockTable *pBlkTbl = NULL;
+	pDb-&gt;getBlockTable(pBlkTbl, ZcDb::kForRead);
+	
+	// 获得模型空间对应的块表记录
+	ZcDbBlockTableRecord *pBlkTblRcd = NULL;
+	pBlkTbl-&gt;getAt(ZCDB_MODEL_SPACE, pBlkTblRcd, ZcDb::kForWrite);
+	pBlkTbl-&gt;close();
+	
+	// 将实体添加到模型空间的块表记录
+	ZcDbObjectId entId;
+	Zcad::ErrorStatus es = pBlkTblRcd-&gt;appendZcDbEntity(entId, pEnt);
+	if (es != Zcad::eOk)
+	{
+		pBlkTblRcd-&gt;close();
+		delete pEnt;	// 添加失败时，要delete
+		pEnt = NULL;
+		
+		return ZcDbObjectId::kNull;
+	}
+	// 关闭模型空间块表记录和实体
+	pBlkTblRcd-&gt;close();
+	pEnt-&gt;close();
+	
+	return entId;
+}</pre>
+<p class="define_text_1">CUtil::DwgZoomExtent来调整后台创建的DWG文件的默认视图范围，其实现代码为：</p>
+<pre class="code_sample">
+void CUtil::DwgZoomExtent( ZcDbDatabase *pDb )
+{
+	assert (pDb);
+	
+	// 获得模型空间所有实体的最小包围框
+	ZcDbExtents	ext	= CUtil::GetModelSpaceExtent(pDb);
+	ZcDbViewportTable* pViewportTable = NULL;
+	if (pDb-&gt;getViewportTable(pViewportTable, ZcDb::kForWrite) == Zcad::eOk)
+	{
+		ZcDbViewportTableRecord *pRecord = NULL;
+		if (pViewportTable-&gt;getAt(TEXT("*ACTIVE"), pRecord, ZcDb::kForWrite) == Zcad::eOk)
+		{
+			ZcGePoint3d center = ZcGePoint3d ((ext.minPoint().x+ ext.maxPoint().x)/2, (ext.minPoint().y+ ext.maxPoint().y)/2, (ext.minPoint().z+ ext.maxPoint().z)/2);
+			double height = ext.maxPoint().y - ext.minPoint().y;
+			double width = ext.maxPoint().x - ext.minPoint().x;
+			pRecord-&gt;setCenterPoint(CUtil::ToPoint2d(center));
+			pRecord-&gt;setHeight(height * 1.2);
+			pRecord-&gt;setWidth(width * 1.2);
+			pRecord-&gt;close();
+		}				
+		pViewportTable-&gt;close();
+	}
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">创建了两个圆实体对象，添加到模型空间，然后保存为D盘下的文件test2.dwg</p>
+<hr algin="left"/>
+<p class="define_head_1">数据库中的符号表和对象的编辑操作</p>
+<p class="define_text_1">要编辑数据库中的对象，通常要先获取对象的ZcDbObjectId。获取对象的ObjectId的途径一般有两种，一种是通过用户交互的接口让用户选择，这个在后面的章节会做详细的介绍，另一种是通过遍历块表记录，比如模型空间、图纸空间或普通的块定义，来获取包含在其中的对象的ZcDbObjectId。</p>
+<p class="define_head_1">代码示例</p>
+<p class="define_head_2">1. 添加一条直线到模型空间</p>
+<pre class="code_sample">
+ZcDbObjectId CreateLine()
+{
+    ZcGePoint3d ptStart(0, 0, 0);
+    ZcGePoint3d ptEnd(100,100, 0);
+    ZcDbLine *pLine = new ZcDbLine(ptStart, ptEnd);
+    ZcDbBlockTable *pBlockTable;
+    zcdbHostApplicationServices()-&gt;workingDatabase ()
+    -&gt;getBlockTable(pBlockTable, ZcDb::kForRead);
+    ZcDbBlockTableRecord *pBlockTableRecord; pBlockTable-&gt;getAt(ZCDB_MODEL_SPACE, pBlockTableRecord, ZcDb::kForWrite);
+    ZcDbObjectId lineId; pBlockTableRecord-&gt;appendZcDbEntity(lineId, pLine);
+    pBlockTable-&gt;close();
+    pBlockTableRecord-&gt;close();
+    pLine-&gt;close();
+    return lineId;
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">添加一条直线到当前活动文档的数据库中。</p>
+<p class="define_head_2">2. 修改模型空间中实体颜色</p>
+<pre class="code_sample">
+void ZWChangeColor()
+{
+	ZcDbDatabase * pDb = zcdbHostApplicationServices()-&gt;workingDatabase();
+	ZcDbObjectIdArray	allEntIds = GetAllEntityIds(NULL, pDb);
+	for (int i = 0; i &lt; allEntIds.length(); i++)
+	{
+		//修改实体的颜色
+		ChangeColor(allEntIds[i], 1);
+	}
+}</pre>
+<p class="define_text_1">GetAllEntityIds函数在上一个示例中展示，ChangeColor函数实现：</p>
+<pre class="code_sample">
+Zcad::ErrorStatus ChangeColor(ZcDbObjectId entld, ZSoft::UInt16 colorindex) {
+	ZcDbEntity *pEntity;
+	//打开图形数据库中的对象
+	zcdbOpenObject(pEntity, entld, ZcDb::kForWrite);
+	//修改实体的颜色 
+	pEntity-&gt;setColorIndex(colorindex);
+	//用完之后，及时关闭
+	pEntity-&gt;close();
+	return Zcad::eOk;
+}</pre>
+<p class="define_text_1">注意：修改颜色等操作属于写操作，打开实体的时候需要用OpenMode.ForWrite模式。</p>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">把当前活动文档的数据库中的模型空间中所有实体变为红色。</p>
+<p class="define_head_2">3. 删除用户选择的直线</p>
+<pre class="code_sample">
+void EraseEnts()
+{
+	ZcDbObjectIdArray entIds;
+	PromptSelectEnts(_T("选择实体:"), entIds);
+	for (int i = 0; i &lt; entIds.length(); i++)
+	{
+		ZcDbEntity *pEnt = NULL;
+		if (zcdbOpenObject(pEnt, entIds[i], ZcDb::kForWrite) == Zcad::eOk)
+		{
+			pEnt-&gt;erase();
+			pEnt-&gt;close();
+		}
+	}
+}</pre>
+<p class="define_text_1">注意：有很多开发者认为实体已经删除了就不用close处理了，这里需要强调erase操作只是将实体在当前的模型空间移除，数据还是存在的必须要做close操作。</p>
+<p class="define_text_1">本示例引入了用户交互概念，后面章节会详细介绍PromptSelectEnts函数实现：</p>
+<pre class="code_sample">
+bool PromptSelectEnts(const TCHAR* prompt, ZcDbObjectIdArray &amp;entIds)
+{
+	entIds.setLogicalLength(0);
+
+	bool bRet = false;
+	zds_name sset;
+	zcutPrintf(prompt);
+	int rc = zcedSSGet(NULL, NULL, NULL, NULL, sset);
+
+	if (rc == RTNORM)
+	{
+		ZSoft::Int32 length = 0;
+		zcedSSLength(sset, &amp;length);
+
+		for (int i = 0; i &lt; length; i++)
+		{
+			zds_name ename;
+			zcedSSName(sset, i, ename);
+
+			ZcDbObjectId entId;
+			zcdbGetObjectId(entId, ename);
+			entIds.append(entId);
+		}
+
+		bRet = true;
+	}
+
+	zcedSSFree(sset);
+
+	return bRet;
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">让用户选择实体，把选择到的实体删除。</p>
+<p class="define_head_2">4. 创建和修改图层</p>
+<pre class="code_sample">
+ void LayerSample()
+{
+	// 获取当前数据库
+	ZcDbDatabase* pDb = zcdbHostApplicationServices()-&gt;workingDatabase();
+		// 获取图层表
+		ZcDbLayerTable* pLayerTb;
+		pDb-&gt;getLayerTable(pLayerTb, ZcDb::kForRead);
+
+		// 检查"Layer 1"是否存在
+		if (pLayerTb-&gt;has(_T("Layer1")))
+		{
+			// 创建图层表遍历器
+			ZcDbLayerTableIterator* pLayerIterator;
+			pLayerTb-&gt;newIterator(pLayerIterator);
+
+			// 遍历所有图层
+			for (; !pLayerIterator-&gt;done(); pLayerIterator-&gt;step())
+			{
+				ZcDbLayerTableRecord* pLayerTblRcd;
+				if (pLayerIterator-&gt;getRecord(pLayerTblRcd, ZcDb::kForWrite) == Zcad::eOk)
+				{
+					// 检查图层是否被删除
+					if (!pLayerTblRcd-&gt;isErased())
+					{
+						// 找到目标图层
+						ZTCHAR* pName;
+						pLayerTblRcd-&gt;getName(pName);
+						if (wcscmp(pName, _T("Layer1")) == 0)
+						{
+							// 修改图层属性
+							pLayerTblRcd-&gt;setName(_T("Layer2"));    // 重命名
+							pLayerTblRcd-&gt;setIsOff(false);           // 打开图层
+							pLayerTblRcd-&gt;setIsFrozen(false);         // 解冻图层
+							pLayerTblRcd-&gt;setIsLocked(false);         // 解锁图层
+
+							// 设置颜色为绿色
+							ZcCmColor color;
+							color.setRGB(0, 255, 0);
+							pLayerTblRcd-&gt;setColor(color);
+
+							pLayerTblRcd-&gt;setVPDFLT(false);           // 默认不显示在视口
+
+							// 设置透明度(127=50%)
+							ZcCmTransparency transparency;
+							transparency.setAlpha(127);
+							pLayerTblRcd-&gt;setTransparency(transparency);
+
+							pLayerTblRcd-&gt;close();
+							break;
+						}
+					}
+					pLayerTblRcd-&gt;close();
+				}
+			}
+			delete pLayerIterator;
+		}
+		else
+		{
+			// 创建新图层
+			ZcDbLayerTableRecord* pLayerTblRcd = new ZcDbLayerTableRecord;
+			pLayerTblRcd-&gt;setName(_T("Layer1"));       // 设置名称
+			pLayerTblRcd-&gt;setIsOff(true);                // 关闭图层
+			pLayerTblRcd-&gt;setIsFrozen(true);             // 冻结图层
+			pLayerTblRcd-&gt;setIsLocked(true);             // 锁定图层
+
+			// 设置颜色为红色
+			ZcCmColor color;
+			color.setRGB(255, 0, 0);
+			pLayerTblRcd-&gt;setColor(color);
+
+			pLayerTblRcd-&gt;setVPDFLT(true);               // 默认显示在视口
+
+			// 设置透明度为随层
+			ZcCmTransparency transparency;
+			transparency.setMethod(ZcCmTransparency::kByLayer);
+			pLayerTblRcd-&gt;setTransparency(transparency);
+
+			// 将图层添加到图层表
+			pLayerTb-&gt;upgradeOpen();
+			pLayerTb-&gt;add(pLayerTblRcd);
+			pLayerTblRcd-&gt;close();
+		}
+
+		pLayerTb-&gt;close();
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">如果不存在名为Layer1的图层，则创建该图层；如果已存在该图层则将其改名为Layer2，并修改其属性。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

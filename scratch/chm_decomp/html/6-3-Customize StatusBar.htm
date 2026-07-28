@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>状态栏</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">状态栏</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="dev_body_text">软件下方的状态栏展示了当前绘图空间的部分设置状态以及必要的信息，可以通过.Net接口添加自定义按钮到状态栏中，或在程序运行过程中通过气泡消息给与用户必要的提示信息。</p>
+<hr algin="left"/>
+<p class="define_head_1">自定义窗格</p>
+<p class="define_text_1">状态栏窗格是通过ZcPane类实现，可以用来展示某些设置的开关状态。</p>
+<div class="define_text_1"><img src="../pics/6-3-pane.png"/></div>
+<p class="define_head_2">创建自定义窗格类</p>
+<p class="define_text_2">可以重载OnLButtonDown事件判断窗格是否被点击，设置PaneStyle的值以达到状态切换的效果。</p>
+<pre class="code_sample">
+class CMyPane : public ZcPane
+{
+public:
+    // 自定义点击事件
+    virtual void OnLButtonDown(UINT nFlags, CPoint point) {
+        if (nFlags == MK_LBUTTON) {
+            CString alertmsg;
+            if (this-&gt;GetStyle() == ZCSB_POPOUT) {
+                this-&gt;SetStyle(ZCSB_NORMAL);
+                alertmsg = "窗格样式切换为NORMAL";
+            }
+            else {
+                this-&gt;SetStyle(ZCSB_POPOUT);
+                alertmsg = "窗格样式切换为POPOUT";
+            }
+            zcedGetApplicationStatusBar()-&gt;Update();
+            zds_alert(alertmsg);
+        }
+    }
+
+};
+</pre>
+<p class="define_head_2">创建窗格</p>
+<pre class="code_sample">
+void addPane() 
+{
+    CMyPane* myPane = new CMyPane();
+    myPane-&gt;Enable(TRUE);
+    myPane-&gt;SetVisible(TRUE);
+    myPane-&gt;SetStyle(ZCSB_NORMAL);
+    myPane-&gt;SetText(L"测试窗格");
+    myPane-&gt;SetToolTipText(L"这是状态栏上的窗格");
+    // 不设置图标则显示文字
+    myPane-&gt;SetIcon(LoadIcon(NULL, IDI_SHIELD));
+    zcedGetApplicationStatusBar()-&gt;Add(myPane);
+}
+</pre>
+<p class="define_head_2">运行效果</p>
+<div class="define_text_1"><img src="../pics/6-3-pane.gif"/></div>
+<hr algin="left"/>
+<p class="define_head_1">提示气泡</p>
+<p class="define_text_1">需要先创建一个托盘对象TrayItem，通过该托盘对象显示提示气泡。</p>
+<div class="define_text_1"><img src="../pics/6-3-trayitem.png"/></div>
+<p class="define_head_2">创建托盘图标和提示气泡</p>
+<pre class="code_sample">
+    myTrayItem = new ZcTrayItem();
+    myTrayItem-&gt;SetToolTipText(L"这是一个托盘");
+    myTrayItem-&gt;SetIcon(LoadIcon(NULL, IDI_INFORMATION));
+    zcedGetApplicationStatusBar()-&gt;Add(myTrayItem);
+
+    ZcTrayItemBubbleWindowControl myBubble;
+    myBubble.SetTitle(L"这是一个提示气泡");
+    myBubble.SetText(L"这是提示气泡的内容");
+    myBubble.SetHyperText(L"显示一个对话框");
+
+    myTrayItem-&gt;ShowBubbleWindow(&amp;myBubble);
+</pre>
+<p class="define_head_2">设置提示气泡中超链接触发事件</p>
+<p class="define_text_2">可以向回调事件中添加点击超链接后要触发的流程。</p>
+<pre class="code_sample">
+    ...
+    myBubble.SetCallback([](void* pData, int nReturnCode) {
+        if (nReturnCode == ZcTrayItemBubbleWindowControl::BUBBLE_WINDOW_HYPERLINK_CLICK) {
+            zds_alert(L"你点击了气泡中的超链接。");
+        }
+        zcedGetApplicationStatusBar()-&gt;Remove(myTrayItem);
+        delete myTrayItem;
+        myTrayItem = nullptr;
+    });
+    ...
+</pre>
+<p class="define_head_2">运行效果</p>
+<div class="define_text_1"><img src="../pics/6-3-trayitem.gif"/></div>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

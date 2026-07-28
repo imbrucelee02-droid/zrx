@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>反应器和扩展协议</title>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312"/>
+<link type="text/css" href="../styles/style.css" rel="stylesheet" />
+<link type="text/css" href="../styles/zwcadcss.css" rel="StyleSheet" />
+
+</head>
+<body>
+<div id="main" class="main">
+<div id="header" class="header">
+<div class="header_resize">
+<div class="banner">
+	<div class="banner_img_right"><IMG src="../images/banner_img_right.png"></div>
+	<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+    <div class="Tophead"><span class="Tophead_text">反应器和扩展协议</span></div> 
+<div class="clr"></div>
+<div id="content" class="content">
+    <div class="content_resize">
+    <div class="article">
+    <div class="clr"></div>
+
+    <p class="body_text">反应器是用于捕捉ZWCAD特定时间的接口，用于告知您当前会话的状态或提醒您发生了某些操作。例如，当修改实体时，会触发ObjectModified事件。此外，还有其他事件会在图形关闭、命令启动或系统变量更改时触发。基于这些事件信息，您可以编写子程序或事件处理程序，利用这些事件来跟踪图形的更改、记录用户在处理特定图形上花费的时间，或者根据这些行为附加执行其他操作。总体而言，反应器是一个较为高级的功能，如果运用得当，可以开发出非常强大且实用的高级功能，从而显著提升用户体验和操作效率。</p>
+	<p class="body_text">同时本章也介绍了双击扩展协议和钩子函数，双击扩展协议可以处理鼠标在双击实体时的处理逻辑，可以用于弹出自定义的设置对话框等；钩子函数则属于更为底层操作函数，在其中会返回当前窗口中消息，包含鼠标行为、窗口信息等。</p>
+
+	<ul class="command_ul">
+	<li>
+	<a href="7-1-DatabaseEvents.htm">数据库反应器</a></li>
+	<li>
+	<a href="7-2-DocumentEvents.htm">文档反应器</a></li>
+	<li>
+	<a href="7-3-EditorEvents.htm">编辑器反应器</a></li> 
+	<li>
+	<a href="7-4-DoubleClik.htm">双击扩展协议</a></li>
+	<li>
+	<a href="7-5-RegisterFilterWinMsg.htm">钩子函数</a></li>
+</ul>
+
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div id="fbg" class="fbg">
+<div class="footer">
+<span class="lr">&copy; 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div> 
+</body>
+</html>

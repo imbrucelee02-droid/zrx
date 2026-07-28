@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>扩展数据的使用</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">扩展数据的使用</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">基本概念</p>
+<p class="define_text_1">ZWCAD允许应用程序在实体上添加扩展数据，来为实体提供额外的信息，如为一个“门框”对象上，你可以为实体添加尺寸和材料信息（如，门的长，宽，高，材料等）扩展数据，这样一来你就可以通过扩展数据来识别这些信息并进行针对性的操作。</p>
+<p class="define_text_1">本文将深入探讨ZWCAD开发中的扩展数据（XData）、扩展记录（XRecord）以及有名对象字典（NameDict）的应用。XData允许用户向实体附加自定义数据，但其容量有限；XRecord则提供了更大的存储空间，常被用作XData的替代方案；而NameDict作为图形数据库的组成部分，主要用于存储与实体无关的设计参数。文章详细阐述了如何添加、查看和删除这些数据，并附上了源码地址，以便读者进行更深入的研究。</p>
+<hr algin="left"/>
+<p class="define_head_1">Xdata扩展数据</p>
+<p class="define_text_1">扩展数据能被添加到任何实体上，并且随ZWCAD图形一起保存。ZWCAD只负责维护扩展数据，但并不使用扩展数据。在许多情况下，扩展数据是向实体添加用户数据的一个有效途径，但每个实体上附加的扩展数据不能超过16KB。
+另外：扩展数据不仅能被添加到实体上，也可以被添加到诸如层、线型等非图形对象上
+只要派生于DBObiect的类都可以添加扩展数据。</p>
+<p class="define_text_1">
+从添加扩展数据的示例代码中可以看出，对象扩展数据的类型以kDxf开头
+命名的DxfCode枚举来表示，例如kDxfRegAppNamee代表应用程序名称，
+kDxfXdControlString 代表字符串，kDxfXdLayerName 代表图层等。这些代表扩展数
+据类型的 DxfCode 枚举所表示的整数实际上是DXF组码，我们可以通过以下列表看DxfCode 枚举所表示的DXF组码的含义展数据。</p>
+<p class="define_text_1">1. 1000(ZcDb::kDxfXdAsciiString)：扩展数据中的ASCII字符串，最多可包含255个字节。</p>
+<p class="define_text_1">2. 1001(ZcDb::kDxfRegAppNamee)：扩展数据注册应用程序名，最多可包含31个字节的ASCII字符串。</p>
+<p class="define_text_1">3. 1002(ZcDb::kDxfXdControlString)：扩展数据控制字符串</p>
+<p class="define_text_1">4. 1003(ZcDb::kDxfXdLayerName)：扩展数据</p>
+<p class="define_text_1">5. 1004(ZcDb::kDxfXdBinaryChunk)：扩展数据中的字节数据块，最多可包含127个字节。</p>
+<p class="define_text_1">6. 1005(ZcDb::kDxfXdHandle)：扩展数据注中图元句柄，最多可以包含16个十六进制数字字符串。</p>
+<p class="define_text_1">7. 1010，1020,1030(ZcDb::kDxfXdXCoord，ZcDb::kDxfXdYCoord，ZcDb::kDxfXdZCoord)：扩展数据中的点坐标。</p>
+<p class="define_text_1">8. 1011(ZcDb::kDxfXdWorldXCoord)：扩展数据注册应用程序名，最多可包含31个字节的ASCII字符串。</p>
+<p class="define_head_2">1. 选择实体添加Xdata</p>
+<pre class="code_sample">
+void addXData()
+{
+	// Get an Entity.
+	zds_name mnEnt;
+    zds_point ptSel;
+    int nRet = zcedEntSel(_T("\nSelect an Entity: "), mnEnt, ptSel);
+	if (nRet != RTNORM)
+		return;
+	ZcDbObjectId oid;
+	
+    Zcad::ErrorStatus retStat;
+    retStat = zcdbGetObjectId(oid, mnEnt);
+    if (retStat != Zcad::eOk)
+		return;
+
+    ZcDbObject* pObj = NULL;
+
+    if ((retStat = zcdbOpenObject(pObj, oid, ZcDb::kForRead)) != Zcad::eOk)
+    {
+        return;
+    }
+	// Get new XData.
+	TCHAR appName[132] = {0};
+	TCHAR resString[200] = {0};
+
+    zcedGetString(NULL, _T("\nEnter application name: "), appName);
+    zcedGetString(NULL, _T("\nEnter string to be added: "), resString);
+
+    // XData
+    resbuf *pRb = NULL;
+	resbuf *pTemp = NULL;
+    
+    pRb = pObj-&gt;xData(appName);
+
+    if (pRb != NULL)
+	{
+        for (pTemp = pRb; pTemp-&gt;rbnext != NULL; pTemp = pTemp-&gt;rbnext);
+    }
+	else
+	{
+        zcdbRegApp(appName);
+        pRb = zcutNewRb(ZcDb::kDxfRegAppName);
+        pTemp = pRb;
+        pTemp-&gt;resval.rstring = (TCHAR*)malloc((_tcslen(appName) + 1) * sizeof(TCHAR));
+        _tcscpy(pTemp-&gt;resval.rstring, appName);
+    }
+
+    pTemp-&gt;rbnext = zcutNewRb(ZcDb::kDxfXdAsciiString);
+    pTemp = pTemp-&gt;rbnext;
+    pTemp-&gt;resval.rstring = (TCHAR*)malloc((_tcslen(resString) + 1) * sizeof(TCHAR));
+    _tcscpy(pTemp-&gt;resval.rstring, resString);
+
+	// Set XData.
+    pObj-&gt;upgradeOpen();
+    pObj-&gt;setXData(pRb);
+    
+    pObj-&gt;close();
+    zcutRelRb(pRb);
+}
+</pre>
+<p class="define_head_2">2. 选择实体获取Xdata</p>
+<pre class="code_sample">
+void printXData()
+{
+	// Get an Entity.
+	zds_name mnEnt;
+    zds_point ptSel;
+    int nRet = zcedEntSel(_T("\nSelect an Entity: "), mnEnt, ptSel);
+	if (nRet != RTNORM)
+		return;
+	ZcDbObjectId oid;
+	
+    Zcad::ErrorStatus retStat;
+    retStat = zcdbGetObjectId(oid, mnEnt);
+    if (retStat != Zcad::eOk)
+		return;
+
+    ZcDbObject* pObj = NULL;
+
+    if ((retStat = zcdbOpenObject(pObj, oid, ZcDb::kForRead)) != Zcad::eOk)
+    {
+        return;
+    }
+
+    // Get the application name for the xdata.
+    //
+	TCHAR appname[133] = {0};
+    if (zcedGetString(NULL, _T("\nEnter the Xdata application name: "), appname) != RTNORM)
+    {
+        pObj-&gt;close();
+        return;
+    }
+
+    // Get the xdata for the application name.
+    //
+    resbuf *pRb = pObj-&gt;xData(appname);
+
+    if (pRb != NULL)
+	{
+        printXDList(pRb);
+        zcutRelRb(pRb);
+    }
+	else
+	{
+        zcutPrintf(_T("\nNo xdata for appname: %s."), appname);
+    }
+    pObj-&gt;close();
+}
+void printXDList(resbuf* pRb)
+{
+    int rt = 0;
+	int i = 0;
+	TCHAR buf[133] = {0};
+
+    for (i = 0;pRb != NULL;i++, pRb = pRb-&gt;rbnext)
+	{
+        if      (pRb-&gt;restype &lt; 1010)  rt = RTSTR;
+		else if (pRb-&gt;restype &lt; 1040)  rt = RT3DPOINT;
+		else if (pRb-&gt;restype &lt; 1060)  rt = RTREAL;
+		else if (pRb-&gt;restype &lt; 1071)  rt = RTSHORT;
+		else if (pRb-&gt;restype == 1071) rt = RTLONG;
+		else                           rt = pRb-&gt;restype; // other
+
+        switch (rt)
+		{
+        case RTSHORT:
+			zcutPrintf(_T("\n(%d . %d)"), pRb-&gt;restype, pRb-&gt;resval.rint);
+            break;
+        case RTREAL:
+			zcutPrintf(_T("\n(%d . %0.3f)"), pRb-&gt;restype, pRb-&gt;resval.rreal);
+            break;
+        case RTSTR:
+			zcutPrintf(_T("\n(%d . \"%s\")"), pRb-&gt;restype, pRb-&gt;resval.rstring);
+            break;
+        case RT3DPOINT:
+			zcutPrintf(_T("\n(%d %0.3f %0.3f %0.3f)"), pRb-&gt;restype, pRb-&gt;resval.rpoint[X], pRb-&gt;resval.rpoint[Y], pRb-&gt;resval.rpoint[Z]);
+            break;
+        case RTLONG:
+            zcutPrintf(_T("\n%ld"), pRb-&gt;resval.rlong);
+            break;
+        }
+    }
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在模型空间随意绘制一个实体执行addXData注册的命令选中实体输入appname和string，再执行printXData注册的命令，命令行输出：刚刚输入的输入appname和string</p>
+<p class="define_head_2">3. 选择实体修改Xdata</p>
+<pre class="code_sample">
+void ModXData()
+{
+    // 提示用户选择实体
+    zds_name mnEnt;
+    zds_point ptSel;
+    int nRet = zcedEntSel(_T("\n选择要修改扩展数据的实体: "), mnEnt, ptSel);
+    if (nRet != RTNORM)
+        return;
+
+    // 获取对象ID
+    ZcDbObjectId oid;
+    Zcad::ErrorStatus retStat = zcdbGetObjectId(oid, mnEnt);
+    if (retStat != Zcad::eOk)
+        return;
+
+    // 打开对象（只读模式先检查XData是否存在）
+    ZcDbObject* pObj = NULL;
+    if ((retStat = zcdbOpenObject(pObj, oid, ZcDb::kForRead)) != Zcad::eOk)
+    {
+        zcutPrintf(_T("\n无法打开实体!"));
+        return;
+    }
+
+    // 获取要修改的XData的应用名称
+    TCHAR appName[132] = {0};
+    if (zcedGetString(NULL, _T("\n输入要修改的XData应用名称: "), appName) != RTNORM)
+    {
+        pObj-&gt;close();
+        return;
+    }
+
+    // 检查该应用名称的XData是否存在
+    resbuf* pRb = pObj-&gt;xData(appName);
+    if (pRb == NULL)
+    {
+        zcutPrintf(_T("\n未找到应用名称为 [%s] 的XData！"), appName);
+        pObj-&gt;close();
+        return;
+    }
+
+    // 关闭只读模式，重新打开以写入模式
+    pObj-&gt;close();
+    if ((retStat = zcdbOpenObject(pObj, oid, ZcDb::kForWrite)) != Zcad::eOk)
+    {
+        zcutPrintf(_T("\n无法以写入模式打开实体!"));
+        return;
+    }
+
+    // 提示用户输入新的XData内容
+    TCHAR newString[200] = {0};
+    if (zcedGetString(NULL, _T("\n输入新的字符串内容: "), newString) != RTNORM)
+    {
+        pObj-&gt;close();
+        return;
+    }
+
+    // 构建新的XData链表
+    resbuf* pNewRb = zcutNewRb(ZcDb::kDxfRegAppName);
+    pNewRb-&gt;resval.rstring = (TCHAR*)malloc((_tcslen(appName) + 1) * sizeof(TCHAR));
+    _tcscpy(pNewRb-&gt;resval.rstring, appName);
+
+    // 添加新的字符串数据
+    resbuf* pTemp = pNewRb;
+    pTemp-&gt;rbnext = zcutNewRb(ZcDb::kDxfXdAsciiString);
+    pTemp = pTemp-&gt;rbnext;
+    pTemp-&gt;resval.rstring = (TCHAR*)malloc((_tcslen(newString) + 1) * sizeof(TCHAR));
+    _tcscpy(pTemp-&gt;resval.rstring, newString);
+
+    // 更新XData
+    pObj-&gt;setXData(pNewRb);
+    zcutPrintf(_T("\n成功修改XData!"));
+
+    // 释放资源
+    pObj-&gt;close();
+    zcutRelRb(pNewRb);
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行ModXData选中上一步实体进行修改，再执行printXData，命令行输出修改后的结果
+
+</p>
+<p class="define_head_2">4. 选择实体删除Xdata</p>
+<pre class="code_sample">
+void DeleteXData()
+{
+	TCHAR appname[133] = {0};
+    if (zcedGetString(NULL, _T("\nEnter the Xdata application name: "), appname) != RTNORM)
+    {
+        pObj-&gt;close();
+        return;
+    }
+
+	// 提示用户选择所要删除扩展数据的图形对象
+	ZcDbEntity *pEnt = NULL;
+	ZcGePoint3d pickPoint;
+	if (CSelectUtil::PromptSelectEntity(TEXT("\n选择所要删除扩展数据的实体:"), ZcDbEntity::desc(), pEnt, pickPoint))
+	{	
+		// 注册应用程序名称
+		zcdbRegApp(appName);
+		
+		// 创建结果缓冲区链表
+		struct resbuf* rb = zcutBuildList(ZcDb::kDxfRegAppName, appName,		// 应用程序名称			
+			RTNONE);
+		
+		// 设置内容为空的结果缓冲区链表就是删除扩展数据
+		pEnt-&gt;setXData(rb);
+		zcutRelRb(rb);
+
+		zcutPrintf(TEXT("\n成功为实体删除了扩展数据."));
+		
+		pEnt-&gt;close();
+	}
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行DeleteXData选中上一步实体，再执行printXData，命令行输出：<br/>
+No xdata for appname:
+</p>
+<hr algin="left"/>
+<p class="define_head_1">XRecord扩展字典</p>
+<p class="define_text_1">
+与扩展数据的作用类似，但是字典提供了一种更好的保存外部数据的机制，与扩展数据
+相比，字典有两个优势:
+</p>
+<p class="define_text_1">每个对象的扩展数据不能超过16KB，扩展字典没有这种限制。
+  </p>
+<p class="define_text_1">扩展数据中仅能保存有限种类的数据，扩展字典没有这种限制。</p>
+<p class="define_text_1">扩展字典是一种与具体的实体对象关联的字典，每个对象仅能拥有一个扩展字典，其中
+可以保存与该对象有关的信息。这些信息可以是扩展记录对象(XRecord)，也可以是其他类
+型的对象。
+在扩展字典中添加扩展记录的步骤如下:
+</p><p class="define_text_1">(1)为实体创建扩展字典。实体在默认情况下不包含扩展字典，你可以使用实体的
+createExtensionDictionary函数创建扩展字典。
+</p><p class="define_text_1">(2)使用实体的extensionDictionary属性获取实体的扩展字典。
+</p><p class="define_text_1">(3)通过XRecord 类的无参数的构造函数创建一个扩展记录。
+</p><p class="define_text_1">(4)为新建的扩展记录添加包含的数据。这可以通过为XRecord 类的 Data 属性赋值来
+实现，该属性为一个struct resbuf*类的对象。
+</p><p class="define_text_1">(5)在实体的扩展字典中使用 DBDictionary类的SetAt函数加入扩展记录
+如果要访问扩展字典中保存的扩展记录，则可使用实体的extensionDictionary 属性获取
+实体的扩展字典，然后调用字典的GetAt函数获得扩展记录。
+在扩展记录中存储和读取数据的方法，都与扩展数据类似，但是扩展记录保存数据时使
+用的组码是ZWCAD的标准组码枚举值表示，这与扩展数据不同。要查询
+ZWCAD 的标准组码，查询DXF 参考手册中的相关部分，如下列表所示。</p>
+<p class="define_text_2">1. 0(ZcDb::Start)：对象类型（字符串），一般是ZRX类型名例如：“Line”，“Arc”等，需要注意的是有两个实体比较特殊，多段线polyline用“LWPOLYLINE”，块参照BlockReference用“INSERT”。</p>
+<p class="define_text_2">2. 1(ZcDb::kDxfText)：图元的主文字值（字符串），例如文字，属性的字符串内容。</p>
+<p class="define_text_2">3. 2(ZcDb::BlockName)：对象名（字符串），例如属性标记，块名等。</p>
+<p class="define_text_2">4. 8(ZcDb::LayerName)：图层名（字符串）。</p>
+<p class="define_text_2">5. 10(ZcDb::XCoordinate)：主要点（直线或者文字的起点，圆心原点等），用三个实数的数组来表示三维点。</p>
+<p class="define_text_2">6. 60(ZcDb::Visiblility)：对象可见性（整数），0表示可见，1表示不可见。</p>
+<p class="define_text_2">7. 62(ZcDb::Color)：颜色编号（整数），可取0~256的整数值，0表示ByBlock，256表示ByLayer。</p>
+<p class="define_head_2">1. 选择实体添加XRecord</p>
+<pre class="code_sample">
+void AddXRecord()
+{
+	zds_name en;
+	zds_point pt;
+	if (zcedEntSel(_T("\nSelect the entity: "), en, pt) != RTNORM)
+	{
+		return;
+	}
+	ZcDbObjectId entId;
+	Zcad::ErrorStatus es = zcdbGetObjectId(entId, en);
+
+	ZcDbObjectId xRecordId;
+	ZcDbDictionary* pDict = NULL;
+	ZcDbObject* pObj = NULL;
+	if (Zcad::eOk != (es = zcdbOpenObject(pObj, entId, ZcDb::kForWrite)))
+	{
+		return;
+	}
+
+	ZcDbObjectId dictObjId = pObj-&gt;extensionDictionary();
+	if (dictObjId == NULL)
+	{
+		es = pObj-&gt;createExtensionDictionary();
+		dictObjId = pObj-&gt;extensionDictionary();
+	}
+	pObj-&gt;close();
+
+	if (Zcad::eOk == (es = zcdbOpenObject(pDict, dictObjId, ZcDb::kForWrite)))
+	{
+		ZcDbXrecord* pXRecord = new ZcDbXrecord();
+
+		if (Zcad::eOk == (es = pDict-&gt;setAt(_T("XRecord"), pXRecord, xRecordId)))
+		{
+			pDict-&gt;close();
+
+			struct resbuf* pRb = NULL;
+			pRb = zcutBuildList(ZcDb::kDxfText, _T("hello"),
+				ZcDb::kDxfInt32, 2,
+				ZcDb::kDxfReal, 3.14,
+				RTNONE);
+			es = pXRecord-&gt;setFromRbChain(*pRb);
+			pXRecord-&gt;close();
+			zcutRelRb(pRb);
+		}
+		else
+		{
+			delete pXRecord;
+			pXRecord = NULL;
+		}
+	}
+}
+</pre>
+<p class="define_head_2">2. 选择实体查询XRecord</p>
+<pre class="code_sample">
+void ViewXRecord()
+{
+	// 提示用户选择所要查看扩展记录的图形对象
+	ZcDbEntity *pEnt = NULL;
+	ZcGePoint3d pickPoint;
+	if (CSelectUtil::PromptSelectEntity(TEXT("\n选择所要查看扩展记录的实体:"), ZcDbEntity::desc(), pEnt, pickPoint))
+	{
+		// 获得实体的扩展字典
+		ZcDbObjectId dictObjId = pEnt-&gt;extensionDictionary(); 
+		pEnt-&gt;close();		
+		if (dictObjId.isNull())
+		{
+			zcutPrintf(TEXT("\n所选择的实体不包含扩展字典!"));
+			return;
+		}
+
+		// 打开扩展字典，获得与关键字"XRecord"关联的扩展记录
+		ZcDbDictionary *pDict = NULL;
+		ZcDbXrecord *pXrec = NULL;
+		struct resbuf *pRb = NULL;
+		if (zcdbOpenObject(pDict, dictObjId, ZcDb::kForRead) == Zcad::eOk)
+		{
+			pDict-&gt;getAt(TEXT("XRecord"), (ZcDbObject*&amp;)pXrec, ZcDb::kForRead);
+			
+			// 获得扩展记录的数据链表并关闭扩展数据对象			
+			pXrec-&gt;rbChain(&amp;pRb);
+			pXrec-&gt;close();
+
+			pDict-&gt;close();
+		}
+		
+		if (pRb != NULL)
+		{
+			// 在命令行显示扩展记录内容
+			struct resbuf *pTemp = pRb;
+			
+			zcutPrintf(TEXT("\n字符串类型的扩展数据是：%s"), pTemp-&gt;resval.rstring);
+			
+			pTemp = pTemp-&gt;rbnext;
+			zcutPrintf(TEXT("\n整数类型的扩展数据是：%d"), pTemp-&gt;resval.rint);
+			
+			pTemp = pTemp-&gt;rbnext;
+			zcutPrintf(TEXT("\n实数类型的扩展数据是：%.2f"), pTemp-&gt;resval.rreal);
+			
+			pTemp = pTemp-&gt;rbnext;
+			zcutPrintf(TEXT("\n点坐标类型的扩展数据是：(%.2f, %.2f, %.2f)"), 
+				pTemp-&gt;resval.rpoint[X], pTemp-&gt;resval.rpoint[Y], 
+				pTemp-&gt;resval.rpoint[Z]);
+			
+			zcutRelRb(pRb);		
+		}
+	}	
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行AddXRecord选中上一步实体，再执行GetXRecord，命令行输出：<br/>
+  Xrecord value: hello<br/>
+  Xrecord value: 2<br/>
+  Xrecord value: 3.14<br/>
+</p>
+<p class="define_head_2">3. 选择实体修改XRecord</p>
+<pre class="code_sample">
+void ModXRecord()
+{
+	zds_name en;
+	zds_point pt;
+	if (zcedEntSel(_T("\nSelect the entity: "), en, pt) != RTNORM)
+	{
+		return;
+	}
+	ZcDbObjectId entId;
+	Zcad::ErrorStatus es = zcdbGetObjectId(entId, en);
+
+	ZcDbObject* pObj = NULL;
+	if (Zcad::eOk != zcdbOpenObject(pObj, entId, ZcDb::kForWrite))
+	{
+		return;
+	}
+
+	ZcDbObjectId dictObjId = pObj-&gt;extensionDictionary();
+	pObj-&gt;close();
+	if (dictObjId == NULL)
+	{
+		zcutPrintf(_T("\nThe entity has not the extension dictionary."));
+		return;
+	}
+	ZcDbDictionary* pDict = NULL;
+	ZcDbXrecord* pXRecord = NULL;
+	if (Zcad::eOk != zcdbOpenObject(pDict, dictObjId, ZcDb::kForWrite))
+	{
+		return;
+	}
+
+	pDict-&gt;getAt(_T("XRecord"), pXRecord, ZcDb::kForWrite);
+	pDict-&gt;close();
+	if (pXRecord)
+	{
+		struct resbuf* pRb;
+		pRb = zcutBuildList(ZcDb::kDxfText, _T("Mod"),
+			ZcDb::kDxfInt32, 1,
+			ZcDb::kDxfReal, 6.28,
+			RTNONE);
+		pXRecord-&gt;setFromRbChain(*pRb);
+	}
+	else
+	{
+		zcutPrintf(_T("\nThe entity has not the extension data."));
+	}
+	pXRecord-&gt;close();
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行ModXRecord选中上一步实体，再执行ModXRecord，命令行输出：<br/>
+  XData value: Mod<br/>
+  XData value: 1<br/>
+  XData value: 6.28。<br/>
+</p>
+<p class="define_head_2">4. 选择实体删除XRecord</p>
+<pre class="code_sample">
+void DelXRecord()
+{
+	zds_name en;
+	zds_point pt;
+	if (zcedEntSel(_T("\nSelect the entity: "), en, pt) != RTNORM)
+	{
+		return;
+	}
+	ZcDbObjectId entId;
+	Zcad::ErrorStatus es = zcdbGetObjectId(entId, en);
+
+	ZcDbObject* pObj = NULL;
+	if (Zcad::eOk != zcdbOpenObject(pObj, entId, ZcDb::kForWrite))
+	{
+		return;
+	}
+
+	ZcDbObjectId dictObjId = pObj-&gt;extensionDictionary();
+	pObj-&gt;close();
+	if (dictObjId == NULL)
+	{
+		zcutPrintf(_T("\nThe entity has not the extension dictionary"));
+		return;
+	}
+
+	ZcDbDictionary* pDict = NULL;
+	es = zcdbOpenObject(pDict, dictObjId, ZcDb::kForWrite);
+	if (Zcad::eOk == es &amp;&amp; pDict)
+	{
+		if (pDict-&gt;has(_T("XRecord")))
+		{
+			pDict-&gt;remove(_T("XRecord"));
+			zcutPrintf(_T("\nThe extension dictionary \"XRecord\" has been deleted."));
+		}
+		else
+		{
+			zcutPrintf(_T("\nThe extension dictionary \"XRecord\" does not exist."));
+		}
+		pDict-&gt;close();
+	}
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行DelXRecord选中上一步实体，再执行GetXRecord，命令行输出：<br/>
+</p><p class="define_text_1">The extension dictionary "XRecord" does not exist.</p><p class="define_head_1">NameDict有名字典</p>
+<p class="define_text_1">有名对象字典则用来保存与实体无关的数据,ZWCAD本身就使用有名对象字典来保存
+些信息，例如组字典(保存编组的信息)、多线样式字典等。</p>
+<p class="define_text_1">在有名对象字典中添加新的字典项的基本步骤如下:<br/>
+</p><p class="define_text_1">(1)使用 ZcDbDatabase 类的 getNamedObjectsDictionary 属性获取有名对象字典。</p>
+<p class="define_text_1">(2)通过 ZcDbDictionary 类的无参数的构造函数创建一个字典项。</p>
+<p class="define_text_1">(3)为新建的字典项添加包含的数据，可以是扩展记录。</p>
+<p class="define_text_1">(4)在有名对象字典中使用 ZcDbDictionary 类的 setAt函数加入上面创建的字典项。</p>
+<p class="define_head_2">1. 添加NameDict</p>
+<pre class="code_sample">
+void AddNameDict()
+{
+	// 获得有名对象字典，向其中添加指定的字典项
+	ZcDbDictionary *pNameObjDict = NULL;//, 
+	zcdbHostApplicationServices()-&gt;workingDatabase()
+		-&gt;getNamedObjectsDictionary(pNameObjDict, ZcDb::kForWrite);
+	// 检查所要添加的字典项是否已经存在
+	ZcDbObjectId dictObjId;
+	ZcDbDictionary *pDict = NULL;
+	if (pNameObjDict-&gt;getAt(TEXT("MyDict"), (ZcDbObject*&amp;)pDict, ZcDb::kForWrite) == Zcad::eKeyNotFound)
+	{
+		pDict = new ZcDbDictionary;
+		pNameObjDict-&gt;setAt(TEXT("MyDict"), pDict, dictObjId);
+		pDict-&gt;close();
+	}
+	pNameObjDict-&gt;close();
+	
+	// 向新建的字典中添加一个图层对象
+	if (zcdbOpenObject(pDict, dictObjId, ZcDb::kForWrite) == Zcad::eOk)
+	{
+		ZcDbLayerTableRecord *pLayer = new ZcDbLayerTableRecord();		
+		ZcCmColor color;
+		color.setColorIndex(20);
+		pLayer-&gt;setColor(color);
+		pLayer-&gt;setIsOff(true);
+		pLayer-&gt;setIsFrozen(true);
+		ZcDbObjectId layerId;
+		Zcad::ErrorStatus es = pDict-&gt;setAt(TEXT("LayerKey"), pLayer, layerId);
+		pLayer-&gt;close();
+		pDict-&gt;close();
+	}
+}</pre>
+<p class="define_head_2">2. 获取NameDict数据</p>
+<pre class="code_sample">
+void ViewNameDict()
+{
+	// 获得对象有名字典中指定的字典项
+	ZcDbDictionary *pNameObjDict = NULL;
+	Zcad::ErrorStatus es;
+	zcdbHostApplicationServices()-&gt;workingDatabase()
+		-&gt;getNamedObjectsDictionary(pNameObjDict, ZcDb::kForRead);
+	ZcDbDictionary *pDict = NULL;
+	es = pNameObjDict-&gt;getAt(TEXT("MyDict"), (ZcDbObject*&amp;)pDict, ZcDb::kForRead);
+	pNameObjDict-&gt;close();
+	
+	// 如果不存在指定的字典项，退出程序
+	if (es == Zcad::eKeyNotFound)
+	{
+		zcutPrintf(TEXT("\n不存在字典项MyDict."));
+		return;
+	}
+	
+	// 获得指定的对象字典中的对象
+	ZcDbLayerTableRecord *pLayer = NULL;
+	if (pDict-&gt;getAt(TEXT("LayerKey"), (ZcDbObject*&amp;)pLayer, ZcDb::kForRead) == Zcad::eOk)
+	{
+		// 获得实体的信息
+		int colorIndex = pLayer-&gt;color().colorIndex();
+		bool bOff = pLayer-&gt;isOff();
+		bool bFrozen = pLayer-&gt;isFrozen();
+		pLayer-&gt;close();
+
+		// 在命令行打印实体信息
+		zcutPrintf(TEXT("\n字典中的图层颜色: %d"), colorIndex);
+		zcutPrintf(TEXT("\n字典中的图层是否是关闭状态: %s"), bOff ? TEXT("是") : TEXT("否"));
+		zcutPrintf(TEXT("\n字典中的图层是否是关闭状态: %s"), bFrozen ? TEXT("是") : TEXT("否"));
+	}
+	pDict-&gt;close();
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行AddNameDict，再执行ViewNameDict，命令行输出：<br/>
+</p><p class="define_text_1">字典中的图层颜色: 20<br/>
+字典中的图层是否是关闭状态: 是<br/>
+字典中的图层是否是关闭状态: 是</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

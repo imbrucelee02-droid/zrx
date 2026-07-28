@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>数据库反应器</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">数据库反应器</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="dev_body_text">
+    数据库反应器是用于接收与数据库状态相关的事件，例如对象被加入到数据库，或数据库中的对象被删除、修改等，
+    这些事件的发送者都是数据库，故我们定义的这类事件都会被加入到数据库事件列表中。
+</p>
+<hr algin="left"/>
+<p class="define_head_1">常用数据库反应器</p>
+<p class="define_text_1"></p>
+<table class="table-desc">
+<tr>
+<th>反应器</th>
+<th>功能概述</th>
+</tr>
+<tr>
+<td class="table-item-odd">ObjectAppended</td>
+<td class="table-item-odd">添加实体</td>
+</tr>
+<tr>
+<td class="table-item-odd">ObjectErased</td>
+<td class="table-item-odd">删除实体</td>
+</tr>
+<tr>
+<td class="table-item-odd">ObjectModified</td>
+<td class="table-item-odd">修改实体</td>
+</tr>
+<tr>
+<td class="table-item-odd">ObjectOpenedForModify</td>
+<td class="table-item-odd">打开以修改实体</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1">定义反应器</p>
+<p class="define_text_1">在工程中新建类，设置基类为ZcDbDatabaseReactor，在类中添加所需的事件虚函数。</p>
+<pre class="code_sample">
+// DBReactor.h
+class DBReactor : public ZcDbDatabaseReactor
+{
+public:
+    ZCRX_DECLARE_MEMBERS(DBReactor);
+    DBReactor();
+    ~DBReactor();
+
+    //when the object has been added to the database
+    virtual void objectAppended(const ZcDbDatabase* dwg, const ZcDbObject* dbObj);
+    //when opend by writing
+    virtual void objectOpenedForModify(const ZcDbDatabase* dwg, const ZcDbObject* dbObj);
+    //when the object is modified
+    virtual void objectModified(const ZcDbDatabase* dwg, const ZcDbObject* dbObj);
+    //when the object is erased or unerased
+    virtual void objectErased(const ZcDbDatabase* dwg, const ZcDbObject* dbObj, ZSoft::Boolean bErased);
+};
+
+// DBReactor.cpp
+ZCRX_NO_CONS_DEFINE_MEMBERS(DBReactor, ZcDbDatabaseReactor);
+
+DBReactor::DBReactor()
+{
+}
+
+DBReactor::~DBReactor()
+{
+}
+
+void DBReactor::objectAppended(const ZcDbDatabase * dwg, const ZcDbObject * dbObj)
+{
+    zcutPrintf(_T("\nobjectAppended"));
+}
+
+void DBReactor::objectOpenedForModify(const ZcDbDatabase * dwg, const ZcDbObject * dbObj)
+{
+    zcutPrintf(_T("\nobjectOpenedForModify"));
+}
+
+void DBReactor::objectModified(const ZcDbDatabase * dwg, const ZcDbObject * dbObj)
+{
+    zcutPrintf(_T("\nobjectModified"));
+}
+
+void DBReactor::objectErased(const ZcDbDatabase * dwg, const ZcDbObject * dbObj, ZSoft::Boolean bErased)
+{
+    zcutPrintf(_T("\nobjectErased"));
+}
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">添加和删除数据库事件</p>
+<pre class="code_sample">
+// 设置全局变量
+static DBReactor* g_dbReactor = NULL;
+void initApp()
+{ 
+    // 在zrx初始化入口中注册反应器类
+    DBReactor::rxInit();
+    zcrxBuildClassHierarchy();
+    zcedRegCmds-&gt;addCommand(_T("DATABASEREACTOR_COMMANDS"), _T("AddDBReactor"), _T("AddDBReactor"), ZCRX_CMD_MODAL, AddDBReactor);
+    zcedRegCmds-&gt;addCommand(_T("DATABASEREACTOR_COMMANDS"), _T("RemoveReactor"), _T("RemoveReactor"), ZCRX_CMD_MODAL, RemoveReactor);
+}
+
+void unloadApp()
+{ 
+    RemoveReactor();
+    // 删除反应器类
+    deleteZcRxClass(DBReactor::desc());
+    zcedRegCmds-&gt;removeGroup(_T("DATABASEREACTOR_COMMANDS"));
+}
+
+void AddDBReactor()
+{
+    if (g_dbReactor == NULL)
+    {
+        g_dbReactor = new DBReactor();
+        zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;addReactor(g_dbReactor);
+    }
+    else
+    {
+        zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;addReactor(g_dbReactor);
+    }
+}
+
+void RemoveReactor()
+{
+    if (g_dbReactor != NULL)
+    {
+        zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;removeReactor(g_dbReactor);
+    }
+}
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">实现代码</p>
+<p class="define_text_1">请参考SDK示例工程代码：DatabaseReactor</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

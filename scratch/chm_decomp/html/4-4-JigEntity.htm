@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Jig拖拽交互</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">Jig拖拽交互</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">说明</p>
+<p class="dev_body_text">拖动效果在ZWCAD中被广泛使用，它在创建、修改实体时具有所见即所得的特点。
+本节介绍ZWCAD提供的最基本的Jig实现,采用的例子是用拖动的方式来创建一个圆形。</p>
+<hr algin="left"/>
+<p class="define_head_1">实现方法</p>
+<p class="define_text_1">实现Jig效果的核心是创建ZcEdJig类的一个子类,重写其中的几个虚函数sampler、update
+和entity，以实现自己需要的效果，它们的作用如下:</p>
+<p class="define_text_1">(1)sampler:将被 ZcEdJig:: drag()函数调用以获得用户输入(用户输入点、角度等)。</p>
+<p class="define_text_1">(2)update:更新实体，以反映在用户输入变换的过程中，图形中的实体需要发生怎样的变化。</p>
+<p class="define_text_1">(3)entity:返回一个实体的指针，告诉ZWCAD哪个实体在被改变。
+除此之外，一般会在子类中添加一个成员函数dolt(函数名称和变量都根据你的需求来
+确定)，这个函数将被命令实现的函数所调用，对Jig对象进行初始化。</p>
+<p class="define_text_1">以下代码用CDrawCircleJig类实现了一个直线拖拽的过程：</p>
+<p class="define_text_1">CPP文件实现：</p>
+<pre class="code_sample">
+#include "CDrawCircleJig.h"
+CDrawCircleJig::CDrawCircleJig(const ZcGeVector3d &amp; normal)
+{
+	m_centerPoint = ZcGePoint3d(0,0,0);
+	m_dRadius = 0.0;
+	m_normal = normal;
+	m_iPromptCount = 0;
+}
+
+CDrawCircleJig::~CDrawCircleJig()
+{
+}
+
+void CDrawCircleJig::doIt()
+{
+	m_pCircle = new ZcDbCircle(m_centerPoint, m_normal, m_dRadius);
+
+	setDispPrompt(_T("Please enter the center："));
+	ZcEdJig::DragStatus stat = drag();
+
+	m_iPromptCount = 1;
+	setDispPrompt(_T("Please enter the radius："));
+	stat = drag();
+
+	if (stat == ZcEdJig::kNormal)
+	{
+		append();
+	}
+	else
+	{
+		delete m_pCircle;
+	}
+}
+
+ZcEdJig::DragStatus CDrawCircleJig::sampler()
+{
+	ZcEdJig::DragStatus stat;
+
+	setSpecialCursorType(ZcEdJig::kCrosshair);
+	setUserInputControls((UserInputControls)(ZcEdJig::kAccept3dCoordinates | ZcEdJig::kNoNegativeResponseAccepted | ZcEdJig::kNoZeroResponseAccepted));
+	if (m_iPromptCount == 0)
+	{
+		ZcGePoint3d inputPt;
+		stat = acquirePoint(inputPt);
+		if (stat == ZcEdJig::kNormal)
+		{
+			if (inputPt.isEqualTo(m_centerPoint))
+			{
+				return ZcEdJig::kNoChange;
+			}
+			m_centerPoint = inputPt;
+		}
+	}
+	else if (m_iPromptCount == 1)
+	{
+		double inputradius = -1;
+		stat = acquireDist(inputradius, m_centerPoint);
+
+		if (stat == ZcEdJig::kNormal)
+		{
+			if (inputradius == m_dRadius)
+			{
+				return ZcEdJig::kNoChange;
+			}
+			m_dRadius = inputradius;
+		}
+	}
+
+	return stat;
+}
+
+ZSoft::Boolean CDrawCircleJig::update()
+{
+	switch (m_iPromptCount)
+	{
+	case 0:
+		m_pCircle-&gt;setCenter(m_centerPoint);
+		m_pCircle-&gt;setRadius(m_dRadius);
+	case 1:
+		m_pCircle-&gt;setRadius(m_dRadius);
+	default:
+		break;
+	}
+	return ZSoft::kTrue;
+}
+
+ZcDbEntity * CDrawCircleJig::entity() const
+{
+	return m_pCircle;
+}</pre>
+<p class="define_text_1">头文件实现：</p>
+<pre class="code_sample">
+#include "stdafx.h"
+#include "zdbjig.h"
+#include "zdbents.h"
+
+class CDrawCircleJig : public ZcEdJig
+{
+public:
+	CDrawCircleJig(const ZcGeVector3d &amp;normal);
+	virtual ~CDrawCircleJig();
+
+	void doIt();
+
+	virtual ZcEdJig::DragStatus sampler();
+
+	virtual ZSoft::Boolean update();
+
+	virtual ZcDbEntity* entity() const;
+private:
+	ZcDbCircle* m_pCircle;
+	ZcGePoint3d m_centerPoint;
+	ZcGeVector3d m_normal;
+	double m_dRadius;
+	int m_iPromptCount;
+};</pre>
+<p class="define_text_1">jig调用与命令注册：</p>
+<pre class="code_sample">
+void initApp()
+{ 
+	zcedRegCmds-&gt;addCommand(_T("CIRCLEJIG_COMMANDS"), _T("CircleJig"), _T("CircleJig"), ZCRX_CMD_MODAL, CircleJig);
+}
+
+
+void unloadApp()
+{ 
+	zcedRegCmds-&gt;removeGroup(_T("CIRCLEJIG_COMMANDS"));
+}
+
+
+void CircleJig()
+{
+	ZcGeVector3d x = zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;ucsxdir();
+	ZcGeVector3d y = zcdbHostApplicationServices()-&gt;workingDatabase()-&gt;ucsydir();
+	ZcGeVector3d normalVec = x.crossProduct(y);
+	normalVec.normalize();
+
+	CDrawCircleJig* pJig = new CDrawCircleJig(normalVec);
+	if (!pJig)
+	{
+		return;
+	}
+
+	pJig-&gt;doIt();
+
+	delete pJig;
+}</pre>
+<p class="define_head_1">关键参数说明：</p>
+<p class="define_text_1">Sampler函数中，首先需要进行交互操作，实例化一个形如 JigPromptXXXOptions 的提示选项类，检测用户的输入，用JigPrompts类(Sampler数的参数)的形如AcquireXXX的函数，得到用户的输入(PromptXXXResult类)。下表列出了与Jig交互操作有关的常用类名和函数名。</p>
+<table class="table-desc">
+<tr>
+<th>函数名</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">acquireAngle</td>
+<td class="table-item-odd">提示用户输入一个角度值</td>
+</tr>
+<tr>
+<td class="table-item-odd">acquireDist</td>
+<td class="table-item-odd">提示用户输入一段距离</td>
+</tr>
+<tr>
+<td class="table-item-odd">acquirePoint</td>
+<td class="table-item-odd">提示用户输入一个点</td>
+</tr><tr>
+</tr>
+</table>
+<p class="define_text_1">在调用 Sampler 函数时，可以通过setSpecialCursorType 对拖动光标的类型进行设置。CursorType枚举值如下表：</p>
+<table class="table-desc">
+<tr>
+<th>枚举值</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">kNoSpecialCursor</td>
+<td class="table-item-odd">与默认光标类似，基点与光标中心之间显示一条橡皮筋线(直线)</td>
+</tr>
+<tr>
+<td class="table-item-odd">kCrosshair</td>
+<td class="table-item-odd">默认光标(十字光标)</td>
+</tr>
+<tr>
+<td class="table-item-odd">kRectCursor</td>
+<td class="table-item-odd">与视图UCS方向一致的矩形窗口光标</td>
+</tr><tr>
+<td class="table-item-odd">kRubberBand</td>
+<td class="table-item-odd">与默认光标类似，基点与光标中心之间显示一条橡皮筋线(直线)</td>
+</tr>
+<tr>
+<td class="table-item-odd">kNotRotated</td>
+<td class="table-item-odd">与视图UCS方向一致的十字光标</td>
+</tr>
+<tr>
+<td class="table-item-odd">kTargetBox</td>
+<td class="table-item-odd">OSNAP光标，与EntitySelect光标形式类似，其大小由系统变量APERTURE控制</td>
+</tr><tr>
+<td class="table-item-odd">kRotatedCrosshair</td>
+<td class="table-item-odd">与当前UCS方向一致的十字光标</td>
+</tr>
+<tr>
+<td class="table-item-odd">kCrosshairNoRotate</td>
+<td class="table-item-odd">与当前UCS方向一致的十字光标，基点与光标中心之间显示一条橡皮筋线(直线)</td>
+</tr>
+<tr>
+<td class="table-item-odd">kInvisible</td>
+<td class="table-item-odd">不显示光标</td>
+</tr>
+<tr>
+<td class="table-item-odd">kEntitySelect</td>
+<td class="table-item-odd">实体拾取框形式的光标</td>
+</tr>
+<tr>
+<td class="table-item-odd">kParallelogram</td>
+<td class="table-item-odd">与当前UCS方向一致的矩形窗口光标(可能显示为平行四边形)</td>
+</tr>
+<tr>
+<td class="table-item-odd">kEntitySelectNoPersp</td>
+<td class="table-item-odd">光标形式与EntitySelect光标形式类似，但支持透视图，当需要在被选实体上确定一个精确点时使用</td>
+</tr>
+<tr>
+<td class="table-item-odd">kPkfirstOrGrips</td>
+<td class="table-item-odd">与默认光标类似</td>
+</tr>
+</table>
+<p class="define_text_1">如要对用户的输入进行限制，则可以通过 setUserInputControls设置，UserInputControls枚举值，如下表所示：
+</p><table class="table-desc">
+<tr>
+<th>枚举值</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">kGovernedByOrthoMode</td>
+<td class="table-item-odd">不需要设置</td>
+</tr>
+<tr>
+<td class="table-item-odd">kNullResponseAccepted</td>
+<td class="table-item-odd">禁止空输入</td>
+</tr>
+<tr>
+<td class="table-item-odd">kDontEchoCancelForCtrlC</td>
+<td class="table-item-odd">设置取消操作时不显示“*取消*”</td>
+</tr><tr>
+<td class="table-item-odd">kDontUpdateLastPoint</td>
+<td class="table-item-odd">禁止更新最后一点</td>
+</tr>
+<tr>
+<td class="table-item-odd">kNoDwgLimitsChecking</td>
+<td class="table-item-odd">不检查图形界限</td>
+</tr>
+<tr>
+<td class="table-item-odd">kNoZeroResponseAccepted</td>
+<td class="table-item-odd">禁止输入零</td>
+</tr><tr>
+<td class="table-item-odd">kNoNegativeResponseAccepted</td>
+<td class="table-item-odd">禁止输入负数</td>
+</tr>
+<tr>
+<td class="table-item-odd">kAccept3dCoordinates</td>
+<td class="table-item-odd">允许输入三维点</td>
+</tr>
+<tr>
+<td class="table-item-odd">kAcceptMouseUpAsPoint</td>
+<td class="table-item-odd">设置鼠标按键释放为选择的点</td>
+</tr>
+<tr>
+<td class="table-item-odd">kAnyBlankTerminatesInput</td>
+<td class="table-item-odd">输入字符串时空格键终止字符串</td>
+</tr>
+<tr>
+<td class="table-item-odd">kInitialBlankTerminatesInput</td>
+<td class="table-item-odd">输入字符串时开始的空格键终止字符串</td>
+</tr>
+<tr>
+<td class="table-item-odd">kAcceptOtherInputString</td>
+<td class="table-item-odd">允许输入非关键字的字符串</td>
+</tr>
+<tr>
+<td class="table-item-odd">kGovernedByUCSDetect</td>
+<td class="table-item-odd">适用于UCS检测</td>
+</tr>
+<tr>
+<td class="table-item-odd">kNoZDirectionOrtho</td>
+<td class="table-item-odd">禁止在Z方向使用正交模式</td>
+</tr>
+</table>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行CircleJig命令提示用选择一个起点“Set start point:"，然后用户拖动鼠标动态变化半径拖拽一个圆，点击确定后最终生成圆。</p>
+<p class="figure"><img class="pics" src="../pics/4-4-MyDrawJig.png"/></p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

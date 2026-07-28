@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>程序入口与命令注册</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">程序入口与命令注册</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">示例代码解析</p>
+<p class="define_text_1">在前面的章节《第一个ZRX程序》中，我们提及到了如下示例代码：</p>
+<pre class="code_sample">
+#include "pch.h"
+#include "zadsmigr.h"
+#include "zadsdef.h"
+#include "zadscodes.h"
+#include "zacestext.h"
+#include "zacedads.h"
+
+void helloworld()
+{
+	zcutPrintf(_T("\nHello world!"));
+}
+
+void initapp()
+{
+	zcedRegCmds-&gt;addCommand(cmd_group_name, _T("helloworld"), _T("helloworld"), ZCRX_CMD_MODAL, helloworld);
+}
+
+void unloadapp()
+{
+	zcedRegCmds-&gt;removeGroup(cmd_group_name);
+}
+
+extern "C" ZcRx::AppRetCode zcrxEntryPoint(ZcRx::AppMsgCode msg, void* appId)
+{
+	switch (msg)
+	{
+	case ZcRx::kInitAppMsg:
+	{
+		zcrxDynamicLinker-&gt;unlockApplication(appId);
+		zcrxDynamicLinker-&gt;registerAppMDIAware(appId);
+		initapp();
+	}
+	break;
+	case ZcRx::kUnloadAppMsg:
+	{
+		unloadapp();
+	}
+	break;
+
+	default:
+		break;
+	}
+	return ZcRx::kRetOK;
+}
+
+
+#ifdef _WIN64
+#pragma comment(linker, "/export:zcrxEntryPoint,PRIVATE")
+#pragma comment(linker, "/export:zcrxGetApiVersion,PRIVATE")
+#else // WIN32
+#pragma comment(linker, "/export:_zcrxEntryPoint,PRIVATE")
+#pragma comment(linker, "/export:_zcrxGetApiVersion,PRIVATE")
+#endif</pre>
+<p class="define_text_1">这是一个最简单的中望CAD ZRX二次开发程序，在这段示例代码里面做了三件事，一是对zcrxEntryPoint和zcrxGetApiVersion，二是定义了命令对应函数helloworld，函数中zcutPrintf(_T("\nHello world!"));语句为在命令行输出“Hello world”字符串；三是在类initapp()中定义了命令helloworld。</p>
+<p class="define_text_1">接下来我们将详细介绍这段代码每一个部分的作用。</p>
+<hr algin="left"/>
+<p class="define_head_1">头文件</p>
+<p class="define_text_1">头文件都是一些常用头文件，如果不清楚需要添加哪些头文件可以在pch.h头文件中直接添加“zarxHeaders.h"几乎能涵盖绝大部分开发场景，如果开发过程中还有某些接口找不到头文件等问题，可以通过开发参考手册中查询。</p>
+<hr algin="left"/>
+<p class="define_head_1"> zcrxEntryPoint入口函数</p>
+<p class="define_text_1">ZRX应用程序是一个DLL，因此它没有主函数main()，ZWCAD调用ZRX模块的zcrxEntryPoint()函数来传送消息到应用程序中，ZWCAD通过调用这个函数来通知ZRX应用程序各种事件和消息。</p>
+<p class="define_text_1">参数说明：</p>
+<p class="define_text_1">msg:一个枚举值，表示ZWCAD发送给ZRX应用程序的消息类型。</p>
+<p class="define_text_1">pkt:一个指向消息相关数据的指针，内容取决于msg参数的值。</p>
+<p class="define_text_1">主要作用：</p>
+<table class="table-desc">
+<tr>
+<th>消息类型</th>
+<th>功能介绍</th>
+</tr>
+<tr>
+<td class="table-item-odd">kInitAppMsg</td>
+<td class="table-item-odd">ZRX应用程序被加载。</td>
+</tr>
+<tr>
+<td class="table-item-odd">kUnloadAppMsg</td>
+<td class="table-item-odd">ZRX应用程序被卸载。</td>
+</tr>
+<tr>
+<td class="table-item-odd">kLoadDwgMsg</td>
+<td class="table-item-odd">图形文件被加载。</td>
+</tr>
+<tr>
+<td class="table-item-odd">kUnloadDwgMsg</td>
+<td class="table-item-odd">图形文件被卸载。</td>
+</tr>
+<tr>
+<td class="table-item-odd">kInvkSubrMsg</td>
+<td class="table-item-odd">调用ZRX定义的命令。</td>
+</tr>
+<tr>
+<td class="table-item-odd">kPreQuitMsg</td>
+<td class="table-item-odd">ZWCAD即将退出。</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1">initapp()和unloadapp()</p>
+<p class="define_head_2">initapp()方法</p>
+<p class="define_text_2">作用：实际上这里它只做一件事情，就是使用ZWCAD的命令机制注册一个新命令。这个命令同ZWCAD的内部命令一样，可以直接在命令行中执行。实际上，这就是运行ZRX程序的方法。</p>
+<p class="define_head_2">unloadApp()方法</p>
+<p class="define_text_2">作用：该函数会从ZWCAD中删除被定义的命令组cmd_group_name宏定义对应的字符串，此后就不能再调用所定义的命令了。前面在initApp()函数中注册了外部函数，在卸载程序时自然要将其删除。</p>
+<hr algin="left"/>
+<p class="define_head_1">命令注册</p>
+<pre class="code_sample">
+	virtual Zcad::ErrorStatus addCommand(const ZTCHAR * cmdGroupName,
+                                     const ZTCHAR * cmdGlobalName,
+                                         const ZTCHAR * cmdLocalName,
+                                         ZSoft::Int32 commandFlags,
+                                         ZcRxFunctionPtr FunctionAddr,
+                                         ZcEdUIContext *UIContext = NULL,
+                                         int fcode = -1,
+                                         HINSTANCE hResourceHandle=NULL,
+                                         ZcEdCommand** cmdPtrRet = NULL) = 0;</pre>
+<p class="define_head_2">参数说明：</p>
+<p class="define_text_3">cmdGroupName：组名，命令编组名称。中望CAD的命令通过不同的命令编组名称进行统一管理。</p>
+<p class="define_text_3">cmdGlobalName：命令的全局名称（英文名称），在ZWCAD命令行中输入的英文命令名。</p>
+<p class="define_text_3">cmdLocalName：本地名称，类似cmdGlobalName参数，不过这里指定的是本地命令名称，方便二次开发程序进行多语言本地化。</p>
+<p class="define_text_3">FunctionAddr：指向命令处理函数的指针，函数必须符合 int func()的原型。</p>
+<p class="define_text_3">fcode：为命令指定一个整数标识码，用于区分不同命令，可用于命令的序列化或脚本处理。</p>
+<p class="define_text_3">resourceInstance：指定本地化资源的来源，当命令需要从资源DLL加载本地化字符串时使用，支持多语言应用程序开发。</p>
+<p class="define_text_3">commandFlags：定义命令的行为。以下为commandFlags类型部分常用值的介绍：</p>
+<p class="define_text_3">
+</p><table class="table-desc">
+<tr>
+<th>枚举值</th>
+<th>功能介绍</th>
+</tr>
+<tr>
+<td class="table-item-odd">ZCRX_CMD_MODAL</td>
+<td class="table-item-odd">将命令设置为模态命令，即该命令只能在当前活动的文档中进行操作，且当其他命令运行时，此命令无法执行。</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCRX_CMD_SESSION</td>
+<td class="table-item-odd">将命令运行级别设置为应用程序级别，而不是当前图形文档级别。当命令需要跨多个文档执行或需要在没有打开任何文档时执行使用。当要对文档内容进行修改时，需要使用zcDocManager-&gt;lockDocument方法锁定文档。</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCRX_CMD_TRANSPARENT</td>
+<td class="table-item-odd">允许命令作为透明命令运行，即在执行其他命令的过程中可以运行此命令。</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCRX_CMD_USEPICKSET</td>
+<td class="table-item-odd">允许命令使用用户之前选择的对象集作为输入。需要获取用户执行命令时已选中的对象时使用。</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCRX_CMD_NOPAPERSPACE</td>
+<td class="table-item-odd">禁止从图纸空间使用此命令。</td>
+</tr>
+<tr>
+<td class="table-item-odd">ZCRX_CMD_NOTILEMODE</td>
+<td class="table-item-odd">当TILEMODE系统变量设置为1时，禁止使用该命令。</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1">zcrxEntryPoint和zcrxGetApiVersion导出</p>
+<pre class="code_sample">
+#ifdef _WIN64
+#pragma comment(linker, "/export:zcrxEntryPoint,PRIVATE")
+#pragma comment(linker, "/export:zcrxGetApiVersion,PRIVATE")
+#else // WIN32
+#pragma comment(linker, "/export:_zcrxEntryPoint,PRIVATE")
+#pragma comment(linker, "/export:_zcrxGetApiVersion,PRIVATE")
+#endif</pre>
+<p class="define_text_1">这是Windows动态链接库创建输出函数的一种方式，也就是说通过导出这两个函数通知ZWCAD输出了哪些函数，以便执行入口函数。另外也可以使用.def模块定义文件来做函数导出：</p>
+<pre class="code_sample">
+LIBRARY	""
+
+EXPORTS
+zcrxEntryPoint PRIVATE
+zcrxGetApiVersion PRIVATE</pre>
+<hr algin="left"/>
+<p class="dev_body_text">这段代码是为开发者提供了一个清晰的结构模板，开发者可以在此基础上加入更复杂的业务逻辑和操作，逐步打造出功能完善、用户体验良好的二次开发程序。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

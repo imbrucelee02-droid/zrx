@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>选择集</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">选择集</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">说明</p>
+<p class="dev_body_text">在ZRX开发过程中，经常需要用户和ZWCAD之间进行交互操作，除了前面介绍的zcedGetXX系列函数之外，选择集是ZWCAD和用户交互操作的重要手段。与zcedEntSel 函数不同，zcedEntSel函数用于提示用户选择一个实体，选择集允许用户同时选择多个图形对象，同时提供了丰富的手段来选择符合特定条件的实体。</p>
+<hr algin="left"/>
+<p class="define_head_1">选择集的创建和删除</p>
+<p class="dev_body_text">选择集是ZWCAD当前图形中的一组实体，通过图元名进行引用，也就是一个zds_name 变量。创建选择集可以使用zcedSSAdd和zcedSSGet函数，其中zcedSSGet函数提供了绝大 多数创建选择集的方法：</p>
+<p class="define_text_1">1.提示用户选择实体。</p>
+<p class="define_text_1">2.使用PICKFIRST选择集(在未执行命令时用户已经选择的图形集合，也就是 ZWCAD中的先选择、再输入命令)或者交叉(Crossing)、多变性交叉(Crossing Polygon)、 栅栏(Fence),最后一个(Last)、前一个(Previous)、窗口(Window)、多边形窗口(Window Polygon)等方式，也可以指定一个点或者一系列点来明确地限定所要选择的实体。</p>
+<p class="define_text_1">3.指定选择实体所要满足的一系列属性和条件来过滤当前数据库，可以和前面的选择 方式配合使用。
+无论使用zcedSSAdd还是zcedSSGet函数，都需要在程序结束之前使用zcedSSFree函数 释放选择集的内存空间。</p>
+<p class="define_head_1">选择集中元素的增加和删除</p>
+<p class="dev_body_text">这里所说的元素增加和删除，仅指在已经获得对象引用的情况下，使用zcedSSAdd和 zcedSSDel函数对选择集进行元素的增加和删除。</p>
+<p class="define_head_2">zcedSSAdd函数定义为：</p>
+<p class="define_text_1">int zcedSSAdd(const zds_name ename, const zds_name sname, zds_name result); 其中，ename指定要添加到选择集的实体的图元名；sname指定选择集的图元名；result 返回被创建或者更新的选择集。根据ename和sname的不同取值，zcedSSAdd有以下几种可 能的执行结果：</p>
+<p class="define_text_1">1.如果ename和sname都是空指针，则创建一个未包含任何成员的选择集。</p>
+<p class="define_text_1">2.如果ename指向一个有效的实体，但sname是空指针，则创建一个选择集，该选择集仅包含一个成员ename。</p>
+<p class="define_text_1">3.如果ename指向有效的实体，且sname指向有效的选择集，则将ename所指向的实 体添加到sname所指向的选择集中。</p>
+<p class="define_head_2">zcedSSDel函数定义为：</p>
+<p class="define_text_1">int zcedSSDel(const zds_name ename, const zds_name ss);</p>
+<p class="define_head_1">对象选择的方法</p>
+<p class="define_text_1">所谓对象选择的方法，就是以某种方式从图形窗口中获得满足某些条件的图形对象。这 里要介绍的是使用zcedSSGet函数所实现的选择对象的方法，该函数被定义为：
+int zcedSSGet (const char *str,
+const void *ptl,
+const void *pt2,
+const struct resbuf *entmask, zds_name ss);
+其中，str参数描述了创建选择集的方法，可以使用的参数值参见表； ptl和pt2为相 关的创建方式提供了点参数，如果不需要指定可以输入NULL作为参数值；entmask用于指 定选择实体的过滤条件；ss则指定了要操作的选择集的图元名。</p>
+<table class="table-desc">
+<tr>
+<th>选择模式</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">NULL</td>
+<td class="table-item-odd">单点选择(如果指定了 ptl)或者提示用户选择(如果ptl的值为NULL)</td>
+</tr>
+<tr>
+<td class="table-item-odd">#</td>
+<td class="table-item-odd">非几何选择模式(包括All、Last和Previous选择模式)</td>
+</tr>
+<tr>
+<td class="table-item-odd">:$</td>
+<td class="table-item-odd">仅提供提示(Prompts supplied)</td>
+</tr>
+<tr>
+<td class="table-item-odd">.</td>
+<td class="table-item-odd">用户选择模式</td>
+</tr>
+<tr>
+<td class="table-item-odd">.?</td>
+<td class="table-item-odd">其他回调选择模式(Othercallbacks)</td>
+</tr>
+<tr>
+<td class="table-item-odd">A</td>
+<td class="table-item-odd">全部选择</td>
+</tr>
+<tr>
+<td class="table-item-odd">B</td>
+<td class="table-item-odd">框选模式</td>
+</tr>
+<tr>
+<td class="table-item-odd">C</td>
+<td class="table-item-odd">窗交选择模式</td>
+</tr>
+<tr>
+<td class="table-item-odd">CP</td>
+<td class="table-item-odd">圏交选择模式(选择多边形(通过在待选对象周围指定点来定义)内部或与之相交</td>
+</tr>
+<tr>
+<td class="table-item-odd">:D</td>
+<td class="table-item-odd">允许复制选择模式(Duplicates OK)</td>
+</tr>
+<tr>
+<td class="table-item-odd">:E</td>
+<td class="table-item-odd">小孔中的所有实体(Everything in aperture)</td>
+</tr>
+<tr>
+<td class="table-item-odd">F</td>
+<td class="table-item-odd">栏选模式</td>
+</tr>
+<tr>
+<td class="table-item-odd">G</td>
+<td class="table-item-odd">选择编组</td>
+</tr> <tr>
+<td class="table-item-odd">I</td>
+<td class="table-item-odd">获得当前图形窗口中己经选择的实体(PickFirst选择集)</td>
+</tr>
+<tr>
+<td class="table-item-odd">:K</td>
+<td class="table-item-odd">键盘回调选择模式(Keywordcallbacks)</td>
+</tr>
+<tr>
+<td class="table-item-odd">L</td>
+<td class="table-item-odd">选择最近一次创建的可见实体</td>
+</tr>
+<tr>
+<td class="table-item-odd">M</td>
+<td class="table-item-odd">指定多次选择而不高亮显示对象，从而加快对复杂对象的选择过程</td>
+</tr>
+<tr>
+<td class="table-item-odd">P</td>
+<td class="table-item-odd">选择最近创建的选择集</td>
+</tr>
+<tr>
+<td class="table-item-odd">:S</td>
+<td class="table-item-odd">单一对象选择模式</td>
+</tr>
+<tr>
+<td class="table-item-odd">W</td>
+<td class="table-item-odd">窗口选择模式</td>
+</tr> <tr>
+<td class="table-item-odd">WP</td>
+<td class="table-item-odd">圈围选择模式</td>
+</tr> <tr>
+<td class="table-item-odd">X</td>
+<td class="table-item-odd">过滤选择模式</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1" id="get-GetSelection">使用选择集过滤器</p>
+<p class="define_text_1">在使用各种选择对象的方法时，可以使用过滤器来限定选择的对象。例如，可以指定仅 选择图层0上的直线对象，也可以指定仅选择蓝色的半径大于30的圆等。
+如果仅使用一个过滤条件，可以使用下面的代码：</p>
+<pre class="code_sample">
+zds_name ssname;
+rb. res type = 0;	/ / 实体名
+_tcscpy (sbuf, TEXT("CIRCLE"))；
+rb.resval.rstring = sbuf;
+rb. rbnext = NULL;	//不需要设置其他的属性
+//选择图形中所有的圆
+zcedSSGet(TEXT("X"), NULL, NULL, &amp;rb, ssname);
+zcedSSFree(ssname);</pre>
+<p class="define_text_1">上面的代码中虽然使用了结果缓冲区，但仅是在栈上声明，由编译器自动管理它所使用 的内存空间，不需要使用zcutRelRb函数来手动销毁它。
+如果要指定多个过滤条件，可以使用zcutBuildList函数来构造结果缓冲区。如果要选择 当前图形窗口中位于0层上的所有直线，就可以使用下面的方法：</p>
+<pre class="code_sample">
+struct resbuf *rb;	//结果缓冲区链表
+zds_name ssname;
+rb = zcutBuildList (RTDXFO, TEXT ("LINEn) , // 实体类型
+8, TEXT("O") ,	// 图层
+RTNONE);
+//选择图形中位于0层上的所有直线
+zcedSSGet(TEXT("X")， NULL, NULL, rb, ssname);
+zcutRelRb(rb); zcedSSFree(ssname);</pre>
+<p class="define_head_1">SelectionFilter过滤器介绍:</p>
+<p class="define_text_1">在标准的DXF组码中，0用于表示实体类型，但是在zcutBuildList函数中0也可以用于 表示结束链表，因此用RTDXF0来代替0。
+过滤器列表由成对的参数组成。第一个参数标识过滤器的类型(例如对象)，第二个参数 指定要过滤的值(例如圆)。过滤器类型是指定使用哪种过滤器的DXF组码，下面列岀了一 些最常用的过滤器类型：</p>
+<p class="define_text_1"> 0：对象类型（字符串），一般是ZRX类型名例如：“Line”，“Arc”等，需要注意的是有两个实体比较特殊，多段线polyline用“LWPOLYLINE”，块参照BlockReference用“INSERT”。</p>
+<p class="define_text_1"> 1：图元的主文字值（字符串），例如文字，属性的字符串内容。</p>
+<p class="define_text_1"> 2：对象名（字符串），例如属性标记，块名等。</p>
+<p class="define_text_1">8：图层名（字符串）。</p>
+<p class="define_text_1"> 10：主要点（直线或者文字的起点，圆心原点等），用三个实数的数组来表示三维点。</p>
+<p class="define_text_1">60：对象可见性（整数），0表示可见，1表示不可见。</p>
+<p class="define_text_1">62：颜色编号（整数），可取0~256的整数值，0表示ByBlock，256表示ByLayer。</p>
+<p class="define_text_1">1000：扩展数据中的ASCII字符串，最多可包含255个字节。</p>
+<p class="define_text_1">1001：扩展数据注册应用程序名，最多可包含31个字节的ASCII字符串。</p>
+<p class="define_text_1">1003：扩展数据图层名。 </p>
+<p class="define_text_1">值得一提的是，在大部分选择模式中均可以使用选择集过滤器，下面的代码提示用户选 择实体的同时使用了选择集过滤器：
+zcedSSGet(NULL, NULL, NULL, rb, ssname);</p>
+<hr algin="left"/>
+<p class="define_head_1">A模式</p>
+<pre class="code_sample">
+// All(Except for frozen layers), Model Space and the active Paper Space
+void SSGet_ModeA()
+{
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+
+	int nRet = zcedSSGet(_T("A"), NULL, NULL, NULL, selSet);
+	if (nRet != RTNORM)
+		return;
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+
+	return;
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在绘图去绘制一些实体，如圆，直线，多段线等执行SSGet_ModeA命令行输出界面上所有实体总数:“The selection set has 8 object”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="get-SelectCrossingWindow">I模式</p>
+<pre class="code_sample">
+void SSGet_ModeI()
+{
+	// Ensure the system variable "PICKFIRST" is 1
+	// Register command with ZCRX_CMD_USEPICKSET | ZCRX_CMD_REDRAW
+	// You should select some entities in advance, otherwise -5001 returns
+
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+
+	zcutPrintf(_T("\nFirst select some entites as pickfirst set."));
+	zcutPrintf(_T("\nThen press the Enter or the Space."));
+
+	int nRet = zcedSSGet(_T("I"), NULL, NULL, NULL, selSet);
+	if (nRet != RTNORM)
+	{
+		zcutPrintf(_T("\nError code: %d"), nRet);
+		return;
+	}
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		zcutPrintf(_T("\nError code: %d"), nRet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+
+	return;
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在绘图去绘制一些实体，如圆，直线，多段线等执，行手动选择一部分实体，命令行输入命令行返回手动选中实体数量：“The selection set has 5 object”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="get-SelectCrossingPolygon">C模式</p>
+<pre class="code_sample">
+// Crossing selection
+void SSGet_ModeC()
+{
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+	// Diagonal vertex of cross window
+	zds_point zdsPt1 = { 0, 0, 0 };
+	zds_point zdsPt2 = { 1000, 1000, 0 };
+
+	int nRet = zcedSSGet(_T("C"), zdsPt1, zdsPt2, NULL, selSet);
+	if (nRet != RTNORM)
+		return;
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+
+	return;
+}
+</pre>
+<p class="figure"><img class="pics" src="../pics/4-3-SelectCrossingWindow.png"/></p>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">如图所示:0,0坐标和1000,1000坐标形成的矩形框内部和相交的实体是选中实体通过自定义函数函数将选择到的实体变成了蓝色，命令行输出选中实体数量：“The selection set has 7 object”。
+</p>
+<hr algin="left"/>
+<p class="define_head_1" id="get-SelectFence">W模式</p>
+<pre class="code_sample">
+void SSGet_ModeW()
+{
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+	// Diagonal vertex of window
+	zds_point zdsPt1 = { 0, 0, 0 };
+	zds_point zdsPt2 = { 1000, 1000, 0 };
+
+	int nRet = zcedSSGet(_T("W"), zdsPt1, zdsPt2, NULL, selSet);
+	if (nRet != RTNORM)
+		return;
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+
+	return;
+}</pre>
+<p class="figure"><img class="pics" src="../pics/4-3-SelectWindow.png"/></p>
+<p class="define_text_1">如图所示:0,0坐标和1000,1000坐标形成的矩形框内部和相交的实体是选中实体通过ChangeColor函数变成了蓝色，命令行输出选中实体数量：“The selection set has 2 object”。
+
+别。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="get-SelectImplied">：S模式</p>
+<pre class="code_sample">
+void SSGet_ModePrompts()
+{
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+	TCHAR* prompt[2] = { _T("\nSelect some entities: "), _T("") };
+
+	int nRet = zcedSSGet(_T(":$"), prompt, NULL, NULL, selSet);
+	if (nRet != RTNORM)
+		return;
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+
+	return;
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">运行命令提示Select some entities:选择实体。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="get-SelectLast"><span class="table-item-odd">X模式</span></p>
+<pre class="code_sample">
+void SSGet_ModeX()
+{
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+	TCHAR* prompt[2] = { _T("\nSelect some entities(red line or circle in layer1): "), _T("") };
+
+	// Only Select red line or circle in layer1
+	struct resbuf *rb;
+rb = zcutBuildList(
+    -4, _T("&lt;OR"),
+    -4, _T("&lt;AND"), RTDXF0, _T("LINE"), 62, 1, -4, _T("AND&gt;"),
+    -4, _T("&lt;AND"), 8, _T("Layer1"), RTDXF0, _T("CIRCLE"), -4, _T("AND&gt;"),
+    -4, _T("OR&gt;"), RTNONE);
+	// Other filter
+	struct resbuf rb1, rb2;
+	TCHAR buf[10] = { 0 };
+	rb1.restype = 0;
+	_tcscpy(buf, _T("LINE"));
+	rb1.resval.rstring = buf;
+	rb2.restype = 62;
+	rb2.resval.rint = 1;
+	rb2.rbnext = NULL;
+	rb1.rbnext = &amp;rb2;
+
+	int nRet = zcedSSGet(_T("X:$"), prompt, NULL, rb, selSet);
+	//int nRet = zcedSSGet(_T("X"), NULL, NULL, &amp;rb1, selSet);
+	//int nRet = zcedSSGet(_T("X"), NULL, NULL, NULL, selSet);   //if the filter is NULL, find all entities in db
+
+	if (nRet != RTNORM)
+		return;
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+	zcutRelRb(rb);
+
+	return;
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在绘图去绘制一些实体，如圆图层设置Layer1，直线多条(将其中一根直线颜色改为红色)，多段线等执行根据提示框选所有绘制的实体，命令行输出:“The selection set has 2 object”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="get-SelectWindow">F模式</p>
+<pre class="code_sample">
+void SSGet_ModeF()
+{
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+
+	resbuf *rbPtSet = NULL, *rbPt = NULL;
+	ZcGePoint3dArray ptsArr;
+	ptsArr.append(ZcGePoint3d(0, 0, 0));
+	ptsArr.append(ZcGePoint3d(1000, 0, 0));
+	ptsArr.append(ZcGePoint3d(1000, 1500, 0));
+	ptsArr.append(ZcGePoint3d(0, 1000, 0));
+	ptsArr.append(ZcGePoint3d(0, 0, 0));
+
+	for (int i = 0; i &lt; ptsArr.length(); i++)
+	{
+		rbPt = zds_buildlist(RTPOINT, asDblArray(ptsArr[i]), 0);
+		if (!rbPtSet)
+			rbPtSet = rbPt;
+		else
+		{
+			resbuf *t;
+			for (t = rbPtSet; t-&gt;rbnext != NULL; t = t-&gt;rbnext);
+			t-&gt;rbnext = rbPt;
+		}
+	}
+
+	int nRet = zcedSSGet(_T("F"), rbPtSet, NULL, NULL, selSet);
+	if (nRet != RTNORM)
+		return;
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+
+	return;
+}
+</pre>
+<p class="figure"><img class="pics" src="../pics/4-3-SelectFence.png"/></p>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">如图所示:经过0,0坐标，1000,0坐标,1000,1500坐标和0,1000围成矩形的实体是选中实体通过ChangeColor函数变成了蓝色，命令行输出选中实体数量：“The selection set has 6 object”。 注意与SelectCrossingPolygon选择方式的区别。</p>
+<p class="figure"><img class="pics" src="../pics/4-3-SelectCrossingPolygon.png"/></p>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">如图所示:0,0坐标，1000,0坐标,1000,1500坐标和0,1000围成的多边范围内部的实体是选中实体通过ChangeColor函数变成了蓝色，命令行输出选中实体数量：“The selection set has 1 object”。</p>
+<hr algin="left"/>
+<p class="define_head_1">：S模式</p>
+<pre class="code_sample">
+void SSGet_ModeS()
+{
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+
+	int nRet = zcedSSGet(_T(":S"), NULL, NULL, NULL, selSet);
+	if (nRet != RTNORM)
+		return;
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+
+	return;
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用户选择单一对象。</p>
+<hr algin="left"/>
+<p class="define_head_1">CP模式</p>
+<pre class="code_sample">
+void SSGet_ModeCP()
+{
+	ZSoft::Int32 len = 0;
+	zds_name selSet;
+	resbuf *rbPtSet = NULL, *rbPt = NULL;
+
+	// Diagonal vertex of cross polygon
+	ZcGePoint3dArray ptsArr;
+	ptsArr.append(ZcGePoint3d(0, 0, 0));
+	ptsArr.append(ZcGePoint3d(1000, 0, 0));
+	ptsArr.append(ZcGePoint3d(1000, 1500, 0));
+	ptsArr.append(ZcGePoint3d(0, 1000, 0));
+	ptsArr.append(ZcGePoint3d(0, 0, 0));
+
+	for (int i = 0; i &lt; ptsArr.length(); i++)
+	{
+		rbPt = zds_buildlist(RTPOINT, asDblArray(ptsArr[i]), 0);
+		if (!rbPtSet)
+			rbPtSet = rbPt;
+		else
+		{
+			resbuf *t;
+			for (t = rbPtSet; t-&gt;rbnext != NULL; t = t-&gt;rbnext);
+			t-&gt;rbnext = rbPt;
+		}
+	}
+
+	int nRet = zcedSSGet(_T("CP"), rbPtSet, NULL, NULL, selSet);
+	if (nRet != RTNORM)
+		return;
+	if (zcedSSLength(selSet, &amp;len) != RTNORM)
+	{
+		zcedSSFree(selSet);
+		return;
+	}
+
+	zcutPrintf(_T("\nThe selection set has %d object"), len);
+	zcedSSFree(selSet);
+
+	return;
+}</pre>
+<p class="figure"><img class="pics" src="../pics/4-3-SelectCrossingPolygon.png"/></p>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">如图所示:0,0坐标，1000,0坐标,1000,1500坐标和0,1000围成的多边形框内部和相交的实体是选中实体通过ChangeColor函数变成了蓝色，命令行输出选中实体数量：“The selection set has 7 object”。
+</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

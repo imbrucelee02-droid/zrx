@@ -1,0 +1,247 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML>
+<HEAD>
+<meta name="GENERATOR" content="Microsoft&reg; HTML Help Workshop 4.1">
+<!-- Sitemap 1.0 -->
+</HEAD>
+<BODY>
+   <OBJECT type="text/site properties"> 
+     <param name="FrameName" value="right">
+     <param name="Font" value="宋体,10,134">
+     <param name="ImageType" value="Book">
+     <param name="Window Styles" value="0x27">
+     <param name="ExWindow Styles" value="0x0">
+   </OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="概述">
+<param name="Local" value="html/1-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="概述">
+<param name="Local" value="html/1-1-API%20Overview.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="ZRX程序结构说明">
+<param name="Local" value="html/1-2-Assemblies.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="ZRXSDK目录说明">
+<param name="Local" value="html/1-3-Basics%20of%20.NET%20API.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="第一个ZRX程序">
+<param name="Local" value="html/2-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="第一个ZRX程序">
+<param name="Local" value="html/2-1-First%20ZRX%20Program.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="程序入口与命令注册">
+<param name="Local" value="html/2-2-Entry%20and%20Command.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="ZRX文件的加载和调试">
+<param name="Local" value="html/2-3-Run%20and%20Debug.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="DWG数据库应用">
+<param name="Local" value="html/3-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="DWG数据库概述">
+<param name="Local" value="html/3-1-Database%20Overview.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="DWG数据库基本操作">
+<param name="Local" value="html/3-2-Database%20Basic.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="数据库对象的复制">
+<param name="Local" value="html/3-3-Database%20Object%20Clone.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="常用实体的创建和编辑">
+<param name="Local" value="html/3-4-Create%20Entities.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="扩展数据的使用">
+<param name="Local" value="html/3-5-Xdata%20and%20XRecord.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="中望CAD中的交互">
+<param name="Local" value="html/4-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="获取用户输入信息">
+<param name="Local" value="html/4-1-Retrieve%20user%20input%20information.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="绘图区用户交互">
+<param name="Local" value="html/4-2-User%20Interaction%20in%20the%20Drawing%20Area.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="选择集">
+<param name="Local" value="html/4-3-Entity%20Selection%20Set.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="Jig拖拽交互">
+<param name="Local" value="html/4-4-JigEntity.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="打印接口的使用">
+<param name="Local" value="html/5-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="打印出图">
+<param name="Local" value="html/5-1-Plot.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="发布出图">
+<param name="Local" value="html/5-2-Publish%20Files.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="界面开发">
+<param name="Local" value="html/6-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="模态对话框和非模态对话框">
+<param name="Local" value="html/6-1-Modal%20and%20Modeless%20Dialog.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="菜单\工具条">
+<param name="Local" value="html/6-2-Customize%20Menu.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="状态栏">
+<param name="Local" value="html/6-3-Customize%20StatusBar.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="停靠面板">
+<param name="Local" value="html/6-4-Add%20PaletteSet.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="反应器和扩展协议">
+<param name="Local" value="html/7-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="数据库反应器">
+<param name="Local" value="html/7-1-DatabaseEvents.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="文档反应器">
+<param name="Local" value="html/7-2-DocumentEvents.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="编辑器反应器">
+<param name="Local" value="html/7-3-EditorEvents.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="双击扩展协议">
+<param name="Local" value="html/7-4-DoubleClick.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="钩子函数">
+<param name="Local" value="html/7-5-RegisterFilterWinMsg.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="自定义对象">
+<param name="Local" value="html/8-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="自定义实体">
+<param name="Local" value="html/8-1-Custom%20Entity.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="OPM面板">
+<param name="Local" value="html/8-2-OPM.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="COM接口使用">
+<param name="Local" value="html/9-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="ZWCAD COM组件简介">
+<param name="Local" value="html/9-1-Introduction%20to%20ZWCAD%20COM%20Interface.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="外部程序调用中望COM接口">
+<param name="Local" value="html/9-2-External%20Invocation%20of%20ZWCAD%20COM.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="典型开发案例">
+<param name="Local" value="html/12-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="三维建模">
+<param name="Local" value="html/12-1-3D%20Modeling.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+<LI><OBJECT type="text/sitemap">
+<param name="Name" value="参数化约束示例">
+<param name="Local" value="html/12-2-Constraint.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="打包发布ZRX程序">
+<param name="Local" value="html/10-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="ZRX文件自动加载">
+<param name="Local" value="html/10-1-Auto%20Load%20zrx.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="常见问题解决">
+<param name="Local" value="html/11-0-Main.htm">
+<param name="ImageNumber" value="1">
+</OBJECT>
+<UL><LI><OBJECT type="text/sitemap">
+<param name="Name" value="常见问题">
+<param name="Local" value="html/11-1-FAQ.htm">
+<param name="ImageNumber" value="9">
+</OBJECT>
+</UL></UL>
+</BODY>
+</HTML>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>文档反应器</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">文档反应器</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="dev_body_text">
+    文档反应器用于接收CAD软件层级的特殊事件，例如图纸创建、销毁、被激活等。
+</p>
+<hr algin="left"/>
+<p class="define_head_1">常用文档事件</p>
+<p class="define_text_1"></p>
+<table class="table-desc">
+<tr>
+<th>事件</th>
+<th>功能概述</th>
+</tr>
+<tr>
+<td class="table-item-odd">documentCreated</td>
+<td class="table-item-odd">创建新文档</td>
+</tr>
+<tr>
+<td class="table-item-odd">documentDestroyed</td>
+<td class="table-item-odd">文档被关闭</td>
+</tr>
+<tr>
+<td class="table-item-odd">documentActivated</td>
+<td class="table-item-odd">文档被激活</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1">定义反应器内容</p>
+<p class="define_text_1">
+    在工程中新建类，设置基类为ZcApDocManagerReactor，在类中添加所需的事件虚函数。
+</p>
+<pre class="code_sample">
+// DocManReactor.h
+class DocManReactor : public ZcApDocManagerReactor
+{
+public:
+    ZCRX_DECLARE_MEMBERS(DocManReactor);
+
+    DocManReactor();
+    ~DocManReactor();
+
+    virtual void documentCreated(ZcApDocument* pDocCreating);
+    virtual void documentDestroyed(const ZTCHAR* fileName);
+    virtual void documentActivated(ZcApDocument* pActivatedDoc);
+};
+
+// DocManReactor.cpp
+ZCRX_NO_CONS_DEFINE_MEMBERS(DocManReactor, ZcApDocManagerReactor);
+
+DocManReactor::DocManReactor()
+{
+}
+
+DocManReactor::~DocManReactor()
+{
+}
+
+void DocManReactor::documentCreated(ZcApDocument * pDocCreating)
+{
+	zcutPrintf(_T("\ndocumentCreated"));
+}
+
+void DocManReactor::documentDestroyed(const ZTCHAR * fileName)
+{
+	zcutPrintf(_T("\ndocumentDestroyed"));
+}
+
+void DocManReactor::documentActivated(ZcApDocument * pActivatedDoc)
+{
+	zcutPrintf(_T("\ndocumentActivated"));
+}
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">添加和删除文档反应器</p>
+<pre class="code_sample">
+static DocManReactor* g_DocManReactor = NULL;
+
+void initApp()
+{ 
+    // 注册反应器类
+    DocManReactor::rxInit();
+    zcrxBuildClassHierarchy();
+    zcedRegCmds-&gt;addCommand(_T("DOCMANAGERREACTOR_COMMANDS"), _T("AddDocManReactor"), _T("AddDocManReactor"), ZCRX_CMD_MODAL, AddDocManReactor);
+    zcedRegCmds-&gt;addCommand(_T("DOCMANAGERREACTOR_COMMANDS"), _T("RemoveDocManReactor"), _T("RemoveDocManReactor"), ZCRX_CMD_MODAL, RemoveDocManReactor);
+}
+
+
+void unloadApp()
+{ 
+    RemoveDocManReactor();
+    // 删除反应器类
+    deleteZcRxClass(DocManReactor::desc());
+    zcedRegCmds-&gt;removeGroup(_T("DOCMANAGERREACTOR_COMMANDS"));
+}
+
+
+void AddDocManReactor()
+{
+    if (g_DocManReactor == NULL)
+    {
+        g_DocManReactor = new DocManReactor();
+        zcDocManager-&gt;addReactor(g_DocManReactor);
+    }
+    else
+    {
+        zcDocManager-&gt;addReactor(g_DocManReactor);
+    }
+}
+
+void RemoveDocManReactor()
+{
+    if (g_DocManReactor != NULL)
+    {
+        zcDocManager-&gt;removeReactor(g_DocManReactor);
+    }
+}
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">实现代码</p>
+<p class="define_text_1">请参考SDK示例工程代码：DocManagerReactor</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

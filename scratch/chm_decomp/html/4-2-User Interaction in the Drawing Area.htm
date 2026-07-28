@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>绘图区用户交互</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">绘图区用户交互</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="define_head_1">说明</p>
+<p class="dev_body_text">本章节将介绍如何通过命令行输入提示用户进行一些简单的绘图区交互以获取一些图形信息，如在界面上获取点坐标，角度，一段距离等。</p>
+<hr algin="left"/>
+<p class="define_head_1">用户交互函数介绍</p>
+<p class="define_text_1">下面表格列举了常见的几种绘图区交互的函数，后续文章将逐一演示如何使用这些函数。</p>
+<table class="table-desc">
+<tr>
+<th>函数名</th>
+<th>作用</th>
+<th>提示选项类</th>
+<th>提示结果类</th>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#GetAngle">zcedGetAngle()</a></td>
+<td class="table-item-odd">提示用户输入一个角度</td>
+<td class="table-item-odd">PromptAngleOptions</td>
+<td class="table-item-odd">PromptDoubleResult</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#GetCorner">zcedGetCorner()</a></td>
+<td class="table-item-odd">提示用户拾取矩形角点</td>
+<td class="table-item-odd">PromptCornerOptions</td>
+<td class="table-item-odd">PromptPointResult</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#GetDistance">zcedGetDist()</a></td>
+<td class="table-item-odd">提示用户输入一段距离</td>
+<td class="table-item-odd">PromptDistanceOptions</td>
+<td class="table-item-odd">PromptDoubleResult</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#GetPoint">zcedGetPoint()</a></td>
+<td class="table-item-odd">提示用户输入一个点</td>
+<td class="table-item-odd">PromptPointOptions</td>
+<td class="table-item-odd">PromptPointResult</td>
+</tr>
+<tr>
+<td class="table-item-odd"><a href="#GetEntity">zcedEntSel()</a></td>
+<td class="table-item-odd">提示用户选择一个实体</td>
+<td class="table-item-odd">PromptEntityOptions</td>
+<td class="table-item-odd">PromptEntityResult</td>
+</tr>
+</table>
+<hr algin="left"/>
+<p class="define_head_1" id="GetAngle">获取一个角度<span class="table-item-odd">zcedGetAngle</span>()</p>
+<pre class="code_sample">
+void getAngle()
+{
+	zds_real dAngle = 0.0;
+	if (zcedGetAngle(NULL, _T("\nPick the first point"), &amp;dAngle) == RTNORM)
+		zcutPrintf(_T("\nThe Angle is %g"), dAngle);
+	else
+		zcutPrintf(_T("\nFailed!"));
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用在绘图界面选择一个点"Pick the first point:"，假设用户选择0,0点，后续系统提示客户选择第二点，假设用户选择了100,100坐标，最终命令行输出：“The angle is 0.785398163397448”。</p>
+<p class="define_text_1">注：角度计算的是0,0到100,100与X坐标轴行程的角度，返回值为弧度制。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="GetCorner">获取矩形角点<span class="table-item-odd">zcedGetCorner</span>()</p>
+<pre class="code_sample">void getCorner()<br/>{<br/>	zds_point ptBase = { 0,0,0 };<br/>	zds_point zdsPt;<br/>	if (zcedGetCorner(ptBase, _T("\nPick the corner:"), zdsPt) == RTNORM)<br/>		zcutPrintf(_T("\nThe Point is (%g, %g, %g)"), zdsPt[X], zdsPt[Y], zdsPt[Z]);<br/>	else<br/>		zcutPrintf(_T("\nFailed!"));<br/>}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用在绘图界面选择一个点"Pick the corner: "，假设用户选择100,100点，后续，最终命令行输出：“The Corner Point is (100, 100, 0)”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="GetDistance">获取一段距离<span class="table-item-odd">zcedGetDist</span>()</p>
+<pre class="code_sample">
+void getDist()
+{
+	zds_real dRet = 0.0;
+	if (zcedGetDist(NULL, _T("\nPick First point:"), &amp;dRet) == RTNORM)
+		zcutPrintf(_T("\nThe distance is %g"), dRet);
+	else
+		zcutPrintf(_T("\nFailed!"));
+}
+</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用在绘图界面选择一个点"Pick First Point: "，假设用户选择0,0点，后续系统提示选择第二点假设用户选择100,0点，最终命令行输出：“The distance is 100”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="GetPoint">获取一个点<span class="table-item-odd">zcedGetPoint</span>()</p>
+<pre class="code_sample">
+void getPoint()
+{
+	zds_point zdsPt;
+	int nRet = zcedGetPoint(NULL, _T("\nSelect a Point："), zdsPt);
+	if (nRet == RTNORM)
+		zcutPrintf(_T("\nThe point is (%g,%g,%g)"), zdsPt[X], zdsPt[Y], zdsPt[Z]);
+	else if (nRet == RTCAN)
+		zcutPrintf(_T("\nYou have cancelled!"));
+	else
+		zcutPrintf(_T("Failed!"));
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">执行命令提示用在绘图界面选择一个点"Select a Point: "，假设用户选择100,1000点，最终命令行输出：“The Point is (100, 100, 0)”。</p>
+<hr algin="left"/>
+<p class="define_head_1" id="GetEntity">拾取一个实体<span class="table-item-odd">GetEntity</span>()</p>
+<pre class="code_sample">
+void entSelEx()
+{
+	zds_name entName;
+	zds_point zdsPt;
+	int nRet = zcedEntSel(_T("\nSelect a Entity:"), entName, zdsPt);
+	if (nRet == RTNORM)
+	{
+		ZcDbObjectId objId;
+		Zcad::ErrorStatus es = Zcad::eOk;
+		if ((es = zcdbGetObjectId(objId, entName)) != Zcad::eOk)
+		{
+			zcutPrintf(_T("\nErrorStatus = %s"), zcadErrorStatusText(es));
+			return;
+		}
+
+		ZcDbEntity* pEnt = nullptr;
+		if ((es = zcdbOpenZcDbEntity(pEnt, objId, ZcDb::kForRead)) != Zcad::eOk)
+		{
+			zcutPrintf(_T("\nErrorStatus = %s"), zcadErrorStatusText(es));
+			return;
+		}
+
+		zcutPrintf(_T("\nThe Entity you select is %s"), pEnt-&gt;isA()-&gt;name());
+		pEnt-&gt;close();
+	}
+}</pre>
+<p class="define_head_1">运行结果：</p>
+<p class="define_text_1">在绘图区绘制一个圆，执行EntSelTest命令提选择一个实体"Select an Entity: "，选择刚刚绘制的圆， 命令行输出：“The Entity you select is ZcDbCircle”。</p>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

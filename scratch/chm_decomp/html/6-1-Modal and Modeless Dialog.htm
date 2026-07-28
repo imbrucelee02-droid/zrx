@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>模态对话框和非模态对话框</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">模态对话框和非模态对话框</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="dev_body_text">通过 ZRX 接口创建对话框，开发者可以使用 MFC 创建模态对话框（Modal Dialog）和非模态对话框（Modeless Dialog）。</p>
+<ul class="command_ul">
+<li class="dev_body_text">模态对话框（Modal Dialog）：模态对话框是一种对话框，它会阻止用户与其他窗口交互，直到关闭该对话框。</li>
+<li class="dev_body_text">非模态对话框（Modeless Dialog）：非模态对话框是一种对话框，它允许用户在打开对话框的同时与其他窗口进行交互。</li>
+</ul>
+<p class="dev_body_text">本教程将展示如何在 ZRX 工程中创建这两种类型的对话框，并将其嵌入到 ZWCAD 环境中。</p>
+<hr algin="left"/>
+<p class="define_head_1">创建ZRX工程</p>
+<p class="define_text_1">使用ZRX向导创建使用共享MFC DLL的扩展MFC DLL</p>
+<p class="define_text_1"><img src="../pics/6-1-create_project.png"/></p>
+<hr algin="left"/>
+<p class="define_head_1">创建对话框</p>
+<p class="define_text_1">在Visual Studio中打开资源视图窗口，找到对应工程的资源目录，右键选择添加资源</p>
+<p class="define_text_1"><img src="../pics/6-1-create_resource.png"/></p>
+<p class="define_text_1">选择Dialog，点击新建按钮</p>
+<p class="define_text_1"><img src="../pics/6-1-create_dialog.png"/></p>
+<hr algin="left"/>
+<p class="define_head_1">生成对话框类</p>
+<p class="define_text_1">完成对话框设计后，右键对话框框体，选择添加类</p>
+<p class="define_text_1"><img src="../pics/6-1-create_dlg_class.png"/></p>
+<p class="define_text_1">将生成的MFC类中对话框基类CDialogEx修改为CZcUiDialog</p>
+<pre class="code_sample">
+// head file
+class CMyDialog : public <font color="red">CZcUiDialog</font>
+{
+public:
+    ...
+}
+
+// cpp file
+IMPLEMENT_DYNAMIC(CMyDialog, <font color="red">CZcUiDialog</font>)
+
+CMyDialog::CMyDialog(CWnd* pParent /*=nullptr*/)
+	: <font color="red">CZcUiDialog</font>(IDD_DIALOG1, pParent)
+{
+}
+
+CMyDialog::~CMyDialog()
+{
+}
+
+void CMyDialog::DoDataExchange(CDataExchange* pDX)
+{
+	<font color="red">CZcUiDialog</font>::DoDataExchange(pDX);
+}
+
+BEGIN_MESSAGE_MAP(CMyDialog, <font color="red">CZcUiDialog</font>)
+END_MESSAGE_MAP()
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">显示对话框</p>
+<p class="define_head_2">模态对话框</p>
+<pre class="code_sample">
+    // 切换资源，防止对话框资源冲突
+    CZcModuleResourceOverride res;
+    CMyDialog dlg;
+    dlg.DoModal();
+</pre>
+<p class="define_head_2">非模态对话框</p>
+<pre class="code_sample">
+    // 全局变量
+    CMyDialog* myDlg = nullptr;
+
+    // 显示对话框
+    void ShowModelessWindow()
+    {
+        CZcModuleResourceOverride res;
+        if (myDlg == nullptr) {
+            myDlg = new CMyDialog(zcedGetZcadFrame());
+            myDlg-&gt;Create(IDD_DIALOG1);
+        }
+        myDlg-&gt;ShowWindow(SW_SHOW);
+    }
+
+    // 不再使用对话框时需要销毁对话框资源
+    void unloadapp() 
+    {
+        if (myDlg != nullptr) {
+            delete myDlg;
+            myDlg = nullptr;
+        }
+    }
+</pre>
+<hr algin="left"/>
+<p class="define_head_1">模态对话框与绘图界面交互</p>
+<p class="define_text_1">由于模态框对话框运行时，无法操作当前程序中其他窗口，但使用过程中可能又需要与绘图界面进行交互，如选择实体等。</p>
+<p class="define_text_1">可以通过CZcUiDialog基类中封装好的BeginEditorCommand、CompleteEditorCommand和CancelEditorCommand方法。</p>
+<pre class="code_sample">
+    void CMyDialog::OnClickedPickPointBtn() {
+        // 隐藏对话框，切换焦点到CAD界面
+        BeginEditorCommand();
+
+        zds_point pt;
+        if (zcedGetPoint(NULL, L"\nPick a point:", pt) == RTNORM) {
+            // 恢复对话框
+            CompleteEditorCommand();
+            zds_printf(L"\npt: %.4f, %.4f, %.4f", pt[0], pt[1], pt[2]);
+        }
+        else {
+            // 取消命令，对话框退出
+            CancelEditorCommand();
+        }
+    }
+</pre>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>

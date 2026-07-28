@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>钩子函数</title>
+<meta content="text/html; charset=gb2312" http-equiv="Content-Type"/>
+<link href="../styles/style.css" rel="stylesheet" type="text/css"/>
+<link href="../styles/zwcadcss.css" rel="StyleSheet" type="text/css"/>
+</head>
+<body>
+<div class="main" id="main">
+<div class="header" id="header">
+<div class="header_resize">
+<div class="banner">
+<div class="banner_img_right"><img src="../images/banner_img_right.png"/></div>
+<div class="hear_text">中望CAD 2026 ZRX二次开发指南</div>
+</div>
+</div>
+</div>
+<div class="clr"></div>
+<div class="Tophead"><span class="Tophead_text">钩子函数</span></div>
+<div class="clr"></div>
+<div class="content" id="content">
+<div class="content_resize">
+<div class="article">
+<div class="clr"></div>
+<p class="dev_body_text">
+上一节提到了我们对特定实体添加了双击协议，使得我们双击该实体时会执行自定义的操作。但是有时我们可能还需要对鼠标不同的按键进行更多的处理，例如鼠标滚轮滚动、按下鼠标中键等行为，故此时我们就需要使用到钩子函数，该函数可以获取到更完整的键盘鼠标输入消息。
+</p>
+<hr algin="left"/>
+<p class="define_head_1">注册钩子函数</p>
+<p class="define_text_1">有两种接口可以注册钩子函数，分别为zcedRegisterFilterWinMsg和zcedRegisterWatchWinMsg，两者使用方式类似，区别如下：</p>
+<table class="table-desc">
+<tr>
+<th>接口</th>
+<th>作用</th>
+</tr>
+<tr>
+<td class="table-item-odd">zcedRegisterFilterWinMsg</td>
+<td class="table-item-odd">传递给应用程序的消息可以被修改，并且可以被阻止。</td>
+</tr>
+<tr>
+<td class="table-item-odd">zcedRegisterWatchWinMsg</td>
+<td class="table-item-odd">此函数只能查看ZWCAD的Windows消息，不能更改或阻止消息。</td>
+</tr>
+</table>
+<pre class="code_sample">
+bool filter(MSG *pMsg) 
+{
+    // 判断当前是否为滚轮消息
+    if (pMsg-&gt;message == WM_MOUSEWHEEL) {
+        zds_printf(L"\n你滚动了鼠标滚轮");
+    }
+    // 返回false可以然后消息继续传递，true则在此处拦截
+    return false;
+}
+
+void watch(MSG *pMsg)
+{
+    // 判断当前是否为鼠标中键消息
+    if (pMsg-&gt;message == WM_MBUTTONDOWN) {
+        zds_printf(L"\n你按下了鼠标中键");
+    }
+}
+
+void initapp()
+{
+    ...
+    // 注册钩子函数
+    zcedRegisterFilterWinMsg(filter);
+    zcedRegisterWatchWinMsg(watch);
+}
+
+void unloadapp()
+{
+    ...
+    // 移除钩子函数
+    zcedRemoveFilterWinMsg(filter);
+    zcedRemoveWatchWinMsg(watch);
+} 
+</pre>
+</div>
+</div>
+</div>
+<div class="blank"></div>
+<div class="footer_placeholder"></div>
+</div>
+<div class="fbg" id="fbg">
+<div class="footer">
+<span class="lr">? 1998-2025 ZWSOFT CO., LTD.(Guangzhou). All Rights Reserved.</span>
+<div class="clr"></div>
+</div>
+</div>
+</body>
+</html>
