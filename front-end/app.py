@@ -170,7 +170,7 @@ def apply_cad_theme():
 
 # ====================== 步骤指示器 ======================
 def render_step_indicators():
-    names = ["① 模式选择", "② CAD 框选提取", "③ 结果确认", "④ 表格替换"]
+    names = ["① 模式选择", "② CAD 框选提取", "③ 识别结果确认", "④ 表格替换"]
     cur = st.session_state.step - 1
     cols = st.columns(4)
     for i, c in enumerate(cols):
@@ -248,7 +248,7 @@ def unwrap_data(data):
 def render_step2(mode: str):
     label = "BOM 表" if mode == "bom" else "标题栏"
     st.header(f"第二步：{label}框选与提取")
-    st.warning("1. 请切换到 ZWCAD 视口  2. 鼠标拉框选择区域  3. 系统自动完成提取")
+    st.warning("1. 请切换到 ZWCAD 视口\n\n2. 鼠标拉框选择区域\n\n3. 系统自动完成提取")
 
     # 自动触发 CAD 框选与识别，无需用户二次点击按钮
     if "has_triggered_select" not in st.session_state or not st.session_state.has_triggered_select:
@@ -301,7 +301,7 @@ def render_step2(mode: str):
 # ====================== Step 3 ======================
 def render_step3(mode: str):
     label = "BOM 表" if mode == "bom" else "标题栏"
-    st.header(f"第三步：{label}结果确认")
+    st.header(f"第三步：{label}识别结果确认")
 
     raw_res = st.session_state.get("raw_result", {})
 
@@ -318,7 +318,7 @@ def render_step3(mode: str):
     else:
         edited = _render_titleblock_editor(raw_res, selected)
 
-    if st.button("确认，进入回写", type="primary", use_container_width=True):
+    if st.button("确认结果，替换表格", type="primary", use_container_width=True):
         st.session_state.final_data = edited
         st.session_state.step = 4
         st.rerun()
@@ -396,7 +396,7 @@ def _render_bom_editor(items) -> list[dict]:
 
     edited_df = st.data_editor(
         df,
-        num_rows="dynamic",
+        num_rows="fixed",
         use_container_width=True,
         column_config={
             "序号": st.column_config.TextColumn("序号", width="small"),
@@ -417,7 +417,6 @@ def _render_bom_editor(items) -> list[dict]:
 
 def _render_titleblock_editor(fields, style: str) -> list[dict]:
     """标题栏模式：键值对编辑"""
-    st.caption("双击修改值，末行可新增漏识别字段")
     if isinstance(fields, str):
         try:
             fields = json.loads(fields)
@@ -439,7 +438,7 @@ def _render_titleblock_editor(fields, style: str) -> list[dict]:
 
     df = pd.DataFrame(rows)
     edited = st.data_editor(
-        df, num_rows="dynamic", use_container_width=True,
+        df, num_rows="fixed", use_container_width=True,
         column_config={"字段名": st.column_config.TextColumn(disabled=False)},
     )
     return edited.to_dict("records")
@@ -525,7 +524,6 @@ def render_step4(mode: str):
 
         if result.get("success"):
             st.success("✅ 表格替换成功！旧表格已清空，新表格已原位放置完毕")
-            st.balloons()
             st.session_state.all_finished = True
         else:
             st.error(f"回写失败：{result.get('message')}")
