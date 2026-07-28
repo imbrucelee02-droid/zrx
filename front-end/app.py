@@ -170,7 +170,7 @@ def apply_cad_theme():
 
 # ====================== 步骤指示器 ======================
 def render_step_indicators():
-    names = ["① 模式选择", "② CAD 框选提取", "③ 结果确认", "④ 回写生成"]
+    names = ["① 模式选择", "② CAD 框选提取", "③ 结果确认", "④ 表格替换"]
     cur = st.session_state.step - 1
     cols = st.columns(4)
     for i, c in enumerate(cols):
@@ -195,6 +195,7 @@ def render_step1(mode: str):
             return
         st.success(f"✅ 服务连接成功 | {health.get('cad_version', '')}")
         st.session_state.step = 2
+        st.session_state.has_triggered_select = False
         st.rerun()
 
 
@@ -247,14 +248,19 @@ def unwrap_data(data):
 def render_step2(mode: str):
     label = "BOM 表" if mode == "bom" else "标题栏"
     st.header(f"第二步：{label}框选与提取")
-    st.warning("1. 切换到 ZWCAD  2. 鼠标框选区域  3. 系统自动提取")
+    st.warning("1. 请切换到 ZWCAD 视口  2. 鼠标拉框选择区域  3. 系统自动完成提取")
 
-    if st.button("激活 CAD 框选并开始识别", type="primary", use_container_width=True):
-        with st.spinner("🚀 已发送指令，请在中望 CAD 视口中拉框选择..."):
+    # 自动触发 CAD 框选与识别，无需用户二次点击按钮
+    if "has_triggered_select" not in st.session_state or not st.session_state.has_triggered_select:
+        st.session_state.has_triggered_select = True
+        with st.spinner("🚀 正在激活 CAD 框选，请在中望 CAD 视口中拉框选择..."):
             resp = call_select_and_process(mode)
 
         if not resp.get("success"):
-            st.error(f"❌ HTTP 请求失败: {resp.get('message', '未知错误')}")
+            st.error(f"❌ 请求失败: {resp.get('message', '未知错误')}")
+            if st.button("重新框选", type="primary"):
+                st.session_state.has_triggered_select = False
+                st.rerun()
             return
 
         data_obj = resp.get("data", {})
@@ -262,6 +268,9 @@ def render_step2(mode: str):
 
         if not extracted or (isinstance(extracted, dict) and not any(extracted.values())):
             st.warning("⚠️ 接收到响应，但数据内容为空（可能是文件路径未匹配或框选超时）。")
+            if st.button("重新框选", type="primary"):
+                st.session_state.has_triggered_select = False
+                st.rerun()
             return
 
         if mode == "titleblock":
@@ -281,9 +290,12 @@ def render_step2(mode: str):
             mode,
         )
 
-        st.success("✅ 接口成功接收并完成解析！正在切入数据确认界面...")
         st.session_state.step = 3
         st.rerun()
+    else:
+        if st.button("重新框选提取", type="secondary", use_container_width=True):
+            st.session_state.has_triggered_select = False
+            st.rerun()
 
 
 # ====================== Step 3 ======================
@@ -292,8 +304,6 @@ def render_step3(mode: str):
     st.header(f"第三步：{label}结果确认")
 
     raw_res = st.session_state.get("raw_result", {})
-    with st.expander("🔍 查看原始识别 JSON 结果", expanded=False):
-        st.json(raw_res)
 
     styles = BOM_STYLES if mode == "bom" else TITLEBLOCK_STYLES
     recommended = st.session_state.get("recommended_style", styles[0])
@@ -408,7 +418,6 @@ def _render_bom_editor(items) -> list[dict]:
 def _render_titleblock_editor(fields, style: str) -> list[dict]:
     """标题栏模式：键值对编辑"""
     st.caption("双击修改值，末行可新增漏识别字段")
-    st.write(f"**DEBUG _render_titleblock_editor:** input type=`{type(fields).__name__}`, style=`{style}`")
     if isinstance(fields, str):
         try:
             fields = json.loads(fields)
@@ -486,7 +495,7 @@ def build_writeback_fields(final_data, raw_result, mode):
 # ====================== Step 4 ======================
 def render_step4(mode: str):
     label = "BOM 表" if mode == "bom" else "标题栏"
-    st.header(f"第四步：{label}回写生成")
+    st.header(f"第四步：{label}表格替换")
 
     final = st.session_state.get("final_data", [])
     raw_res = st.session_state.get("raw_result", {})
@@ -497,7 +506,6 @@ def render_step4(mode: str):
     c1.metric("模式", label)
     c2.metric("样式", style_name)
     c3.metric("行数/字段数", len(final) if final else len(raw_res))
-    st.caption(f"bbox: ({bbox.get('min_x',0):.0f},{bbox.get('min_y',0):.0f}) → ({bbox.get('max_x',0):.0f},{bbox.get('max_y',0):.0f})")
 
     fields_payload = build_writeback_fields(final, raw_res, mode)
 
@@ -510,15 +518,13 @@ def render_step4(mode: str):
         "fields_data": fields_payload
     }
 
-    with st.expander("🔍 查看即将发送给 CAD 的回写数据 Payload (Debug)", expanded=False):
-        st.json(payload)
 
-    if st.button("回写生成 CAD 表格", type="primary", use_container_width=True):
+    if st.button("表格替换", type="primary", use_container_width=True):
         with st.spinner("正在生成 ZcDbTable..."):
             result = call_writeback_table(payload)
 
         if result.get("success"):
-            st.success("✅ 回写成功！表格已精准放置并重绘渲染完毕")
+            st.success("✅ 表格替换成功！旧表格已清空，新表格已原位放置完毕")
             st.balloons()
             st.session_state.all_finished = True
         else:
@@ -534,17 +540,18 @@ def on_mode_change():
     if st.session_state.get("mode") != new_mode:
         st.session_state.mode = new_mode
         st.session_state.step = 1
+        st.session_state.has_triggered_select = False
         st.session_state.final_data = []
         st.session_state.raw_result = {}
 
 
 # ====================== 主函数 ======================
 def main():
-    st.set_page_config(page_title="CAD 图纸智能提取平台", page_icon="🏗️", layout="wide")
+    st.set_page_config(page_title="CAD机械表格标准化平台", page_icon="🏗️", layout="wide")
     init_session()
     apply_cad_theme()
 
-    st.title("CAD 图纸智能提取平台")
+    st.title("CAD机械表格标准化平台")
 
     if "mode_selector_widget" not in st.session_state:
         st.session_state["mode_selector_widget"] = "BOM 表转换" if st.session_state.get("mode") == "bom" else "标题栏转换"
