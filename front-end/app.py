@@ -125,7 +125,7 @@ def classify_style(data: dict, mode: str) -> str:
         return "标题栏-3(17字段)"
 
     # 默认匹配样式1
-    return "标题栏-1(15字段)
+    return "标题栏-1(15字段)"
 
 def get_titleblock_fields(style: str) -> list[tuple[str, str]]:
     """按样式裁剪标题栏字段列表"""
