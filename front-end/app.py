@@ -102,30 +102,24 @@ def call_health_check() -> dict:
 def classify_style(data: dict, mode: str) -> str:
     """根据非空字段自动推荐样式。默认样式1，只有当特定字段非空时才切换样式。"""
     if mode == "bom":
-        has_no = bool(data.get("drawing_no", "").strip() or data.get("图号/代号", "").strip() or data.get("图号", "").strip() or data.get("代号", "").strip())
-        return "样式2(代号)" if has_no else "样式1(图号)"
+        items = []
+        if isinstance(data, list):
+            items = data
+        elif isinstance(data, dict):
+            items = data.get("items", [data])
 
-    def has_val(keys):
-        for k in keys:
-            val = data.get(k, "")
-            if isinstance(val, str) and val.strip():
-                return True
-        return False
-
-    # 1. 备注/扩展字段非空 -> 匹配样式5
-    if has_val(["remark", "备注", "assembly_name", "装配名称", "assembly_no", "装配图号", "unit_weight", "单重", "position_no", "位号", "quantity", "数量", "revision_no", "制修号"]):
-        return "标题栏-5(26字段)"
-
-    # 2. 校对/审核/批准非空 -> 匹配样式2
-    if has_val(["checker", "校对", "auditor", "审核", "approver", "批准", "审定"]):
-        return "标题栏-2(19字段)"
-
-    # 3. 制图非空 -> 匹配样式3
-    if has_val(["drawer", "制图"]):
-        return "标题栏-3(17字段)"
-
-    # 默认匹配样式1
-    return "标题栏-1(15字段)"
+        has_daihao = False
+        for it in items:
+            if isinstance(it, dict):
+                for k, v in it.items():
+                    val_clean = str(v).replace(" ", "").replace("	", "").strip()
+                    key_clean = str(k).replace(" ", "").replace("	", "").strip()
+                    if "代号" in key_clean or "代号" in val_clean or key_clean == "drawing_no":
+                        has_daihao = True
+                        break
+            if has_daihao:
+                break
+        return "样式2(代号)" if has_daihao else "样式1(图号)" 
 
 def get_titleblock_fields(style: str) -> list[tuple[str, str]]:
     """按样式裁剪标题栏字段列表"""
