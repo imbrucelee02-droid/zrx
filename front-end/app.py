@@ -111,6 +111,13 @@ def call_health_check() -> dict:
 def classify_style(data: dict, mode: str) -> str:
     """根据非空字段自动推荐样式。默认样式1，只有当特定字段非空时才切换样式。"""
     if mode == "bom":
+        if isinstance(data, dict) and data.get("table_type") == 2:
+            return "样式2(代号)"
+
+        data_str = str(data).replace(" ", "").replace("\t", "").replace("\r", "").replace("\n", "")
+        if "代号" in data_str:
+            return "样式2(代号)"
+
         items = []
         if isinstance(data, list):
             items = data
@@ -121,8 +128,8 @@ def classify_style(data: dict, mode: str) -> str:
         for it in items:
             if isinstance(it, dict):
                 for k, v in it.items():
-                    val_clean = str(v).replace(" ", "").replace("	", "").strip()
-                    key_clean = str(k).replace(" ", "").replace("	", "").strip()
+                    val_clean = str(v).replace(" ", "").replace("\t", "").strip()
+                    key_clean = str(k).replace(" ", "").replace("\t", "").strip()
                     if "代号" in key_clean or "代号" in val_clean or key_clean == "drawing_no":
                         has_daihao = True
                         break
