@@ -452,13 +452,27 @@ def build_writeback_fields(final_data, raw_result, mode):
     target = final_data if (final_data and len(final_data) > 0) else raw_result
 
     if mode == "bom":
+        # Convert English/display keys to actual BOMbody.dwg attribute Tag names (Chinese)
+        def _convert_bom_keys(items_list):
+            converted = []
+            for item in items_list:
+                if isinstance(item, dict):
+                    new_item = {}
+                    for k, v in item.items():
+                        tag = BOM_ATTR_TAGS.get(k, k)
+                        new_item[tag] = str(v).strip() if v else ""
+                    converted.append(new_item)
+                else:
+                    converted.append(item)
+            return converted
+
         if isinstance(target, list):
-            fields_payload = {"items": target}
+            fields_payload = {"items": _convert_bom_keys(target)}
         elif isinstance(target, dict):
-            if "items" in target:
-                fields_payload = target
+            if "items" in target and isinstance(target["items"], list):
+                fields_payload = {"items": _convert_bom_keys(target["items"])}
             else:
-                fields_payload = {"items": [target]}
+                fields_payload = {"items": _convert_bom_keys([target])}
     else:
         # TitleBlock 模式：兼容 字段名/识别值 列表、扁平字典、多属性字典
         if isinstance(target, list):
