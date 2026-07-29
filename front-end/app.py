@@ -32,6 +32,15 @@ BOM_FIELDS = {
     "total_weight": "总重", "remark": "备注",
 }
 
+BOM_ATTR_TAGS = {
+    "serial_no": "序号", "drawing_no": "图号", "name": "名称",
+    "material": "材料", "quantity": "数量", "unit_weight": "单重",
+    "total_weight": "总重", "remark": "备注",
+    "序号": "序号", "图号/代号": "图号", "名称": "名称",
+    "材料": "材料", "数量": "数量", "单重": "单重",
+    "总重": "总重", "备注": "备注", "图号": "图号", "代号": "图号",
+}
+
 BOM_STYLES = ["样式1(图号)", "样式2(代号)"]
 TITLEBLOCK_STYLES = [
     "标题栏-1(15字段)", "标题栏-2(19字段)", "标题栏-3(17字段)",
