@@ -100,21 +100,32 @@ def call_health_check() -> dict:
 
 # ====================== 样式分类引擎 ======================
 def classify_style(data: dict, mode: str) -> str:
-    """根据非空字段自动推荐样式。BOM: 有代号→样式2; 标题栏: 按扩展字段→校对→制图→日期优先级判定。"""
+    """根据非空字段自动推荐样式。默认样式1，只有当特定字段非空时才切换样式。"""
     if mode == "bom":
-        return "样式2(代号)" if data.get("drawing_no", "").strip() else "样式1(图号)"
+        has_no = bool(data.get("drawing_no", "").strip() or data.get("图号/代号", "").strip() or data.get("图号", "").strip() or data.get("代号", "").strip())
+        return "样式2(代号)" if has_no else "样式1(图号)"
 
-    has = lambda k: bool(data.get(k, "").strip())
-    if any(has(k) for k in ["assembly_name", "position_no", "revision_no", "unit_weight", "remark"]):
+    def has_val(keys):
+        for k in keys:
+            val = data.get(k, "")
+            if isinstance(val, str) and val.strip():
+                return True
+        return False
+
+    # 1. 备注/扩展字段非空 -> 匹配样式5
+    if has_val(["remark", "备注", "assembly_name", "装配名称", "assembly_no", "装配图号", "unit_weight", "单重", "position_no", "位号", "quantity", "数量", "revision_no", "制修号"]):
         return "标题栏-5(26字段)"
-    if has("checker") or has("approver"):
-        return "标题栏-2(19字段)"
-    if has("drawer") or has("final_reviewer"):
-        return "标题栏-3(17字段)"
-    if not has("drawing_date"):
-        return "标题栏-4(16字段)"
-    return "标题栏-1(15字段)"
 
+    # 2. 校对/审核/批准非空 -> 匹配样式2
+    if has_val(["checker", "校对", "auditor", "审核", "approver", "批准", "审定"]):
+        return "标题栏-2(19字段)"
+
+    # 3. 制图非空 -> 匹配样式3
+    if has_val(["drawer", "制图"]):
+        return "标题栏-3(17字段)"
+
+    # 默认匹配样式1
+    return "标题栏-1(15字段)
 
 def get_titleblock_fields(style: str) -> list[tuple[str, str]]:
     """按样式裁剪标题栏字段列表"""
